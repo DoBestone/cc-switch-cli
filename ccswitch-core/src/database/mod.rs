@@ -3,9 +3,14 @@
 //! 提供应用的核心数据存储功能，包括：
 //! - 供应商配置管理
 //! - MCP 服务器配置
+//! - Prompts 管理
+//! - Skills 管理
 //! - 通用设置存储
 
+mod mcp;
+mod prompt;
 mod schema;
+mod skill;
 
 use crate::config::get_app_config_dir;
 use crate::error::AppError;
@@ -110,11 +115,56 @@ impl Database {
             CREATE TABLE IF NOT EXISTS mcp_servers (
                 id TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
-                config TEXT NOT NULL,
-                apps TEXT NOT NULL,
-                enabled INTEGER DEFAULT 1,
+                server_config TEXT NOT NULL,
+                description TEXT,
+                homepage TEXT,
+                docs TEXT,
+                tags TEXT,
+                enabled_claude INTEGER DEFAULT 0,
+                enabled_codex INTEGER DEFAULT 0,
+                enabled_gemini INTEGER DEFAULT 0,
+                enabled_opencode INTEGER DEFAULT 0,
                 created_at INTEGER,
                 sort_index INTEGER
+            );
+
+            -- Prompts 表
+            CREATE TABLE IF NOT EXISTS prompts (
+                id TEXT NOT NULL,
+                app_type TEXT NOT NULL,
+                name TEXT NOT NULL,
+                content TEXT NOT NULL,
+                description TEXT,
+                enabled INTEGER DEFAULT 0,
+                created_at INTEGER,
+                updated_at INTEGER,
+                PRIMARY KEY (id, app_type)
+            );
+
+            -- Skills 表
+            CREATE TABLE IF NOT EXISTS skills (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                description TEXT,
+                directory TEXT NOT NULL,
+                repo_owner TEXT,
+                repo_name TEXT,
+                repo_branch TEXT,
+                readme_url TEXT,
+                enabled_claude INTEGER DEFAULT 0,
+                enabled_codex INTEGER DEFAULT 0,
+                enabled_gemini INTEGER DEFAULT 0,
+                enabled_opencode INTEGER DEFAULT 0,
+                installed_at INTEGER
+            );
+
+            -- Skill 仓库表
+            CREATE TABLE IF NOT EXISTS skill_repos (
+                id TEXT PRIMARY KEY,
+                owner TEXT NOT NULL,
+                name TEXT NOT NULL,
+                branch TEXT DEFAULT 'main',
+                enabled INTEGER DEFAULT 1
             );
 
             -- 设置表

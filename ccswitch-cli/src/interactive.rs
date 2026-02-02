@@ -111,7 +111,7 @@ fn select_provider(state: &AppState, app_type: AppType) -> Result<String> {
 /// 主菜单
 pub fn main_menu() -> Result<()> {
     let ctx = OutputContext::new(crate::cli::OutputFormat::Table, false);
-    
+
     println!();
     println!("{}", "╔════════════════════════════════════════╗".cyan());
     println!("{}", "║     CC-Switch - AI CLI 配置管理器      ║".cyan().bold());
@@ -119,18 +119,30 @@ pub fn main_menu() -> Result<()> {
     println!();
     println!("{}", "请选择操作:".white().bold());
     println!();
+    println!("{}", "── 供应商管理 ──".dimmed());
     println!("  {} {} - 查看所有供应商配置", "1.".green(), "列出供应商".white());
     println!("  {} {} - 查看当前使用的供应商", "2.".green(), "查看状态".white());
     println!("  {} {} - 切换到其他供应商", "3.".green(), "切换供应商".white());
     println!("  {} {} - 添加新的供应商配置", "4.".green(), "添加供应商".white());
     println!("  {} {} - 删除供应商配置", "5.".green(), "删除供应商".white());
-    println!("  {} {} - 查看配置文件路径", "6.".green(), "查看配置".white());
+    println!();
+    println!("{}", "── 扩展功能 ──".dimmed());
+    println!("  {} {} - 管理 MCP 服务器", "6.".green(), "MCP 服务器".white());
+    println!("  {} {} - 管理系统提示词", "7.".green(), "Prompts".white());
+    println!("  {} {} - 管理 Skills 扩展", "8.".green(), "Skills".white());
+    println!();
+    println!("{}", "── 工具 ──".dimmed());
+    println!("  {} {} - 设置全局代理", "9.".green(), "代理设置".white());
+    println!(" {} {} - 测试 API 端点延迟", "10.".green(), "端点测速".white());
+    println!(" {} {} - 检测环境变量冲突", "11.".green(), "环境检测".white());
+    println!(" {} {} - 查看配置文件路径", "12.".green(), "查看配置".white());
+    println!();
     println!("  {} {} - 退出程序", "0.".green(), "退出".white());
     println!();
-    
+
     loop {
         let choice = read_input("请输入操作编号: ")?;
-        
+
         match choice.as_str() {
             "1" | "list" | "ls" => {
                 commands::list::list_providers(&ctx, AppTypeArg::All, false)?;
@@ -149,7 +161,25 @@ pub fn main_menu() -> Result<()> {
             "5" | "remove" | "rm" => {
                 return interactive_remove(&ctx);
             }
-            "6" | "config" => {
+            "6" | "mcp" => {
+                return interactive_mcp(&ctx);
+            }
+            "7" | "prompt" | "prompts" => {
+                return interactive_prompt(&ctx);
+            }
+            "8" | "skill" | "skills" => {
+                return interactive_skill(&ctx);
+            }
+            "9" | "proxy" => {
+                return interactive_proxy(&ctx);
+            }
+            "10" | "speedtest" | "speed" => {
+                return interactive_speedtest(&ctx);
+            }
+            "11" | "env" => {
+                return interactive_env(&ctx);
+            }
+            "12" | "config" => {
                 commands::config::show_paths(&ctx, AppTypeArg::All)?;
                 return Ok(());
             }
@@ -159,10 +189,10 @@ pub fn main_menu() -> Result<()> {
             }
             "" => {
                 // 空输入显示提示
-                println!("{}", "请输入 1-6 选择操作，或输入 0 退出".dimmed());
+                println!("{}", "请输入 1-12 选择操作，或输入 0 退出".dimmed());
             }
             _ => {
-                println!("{}", "无效选择，请输入 0-6".yellow());
+                println!("{}", "无效选择，请输入 0-12".yellow());
             }
         }
     }
@@ -242,20 +272,236 @@ fn interactive_add(ctx: &OutputContext) -> Result<()> {
 /// 交互式删除供应商
 fn interactive_remove(ctx: &OutputContext) -> Result<()> {
     println!("\n{}", "═══ 删除供应商 ═══".cyan().bold());
-    
+
     let app_type = select_app_type()?;
     let state = AppState::init()?;
     let name = select_provider(&state, app_type)?;
-    
+
     let app_arg = match app_type {
         AppType::Claude => AppTypeArg::Claude,
         AppType::Codex => AppTypeArg::Codex,
         AppType::Gemini => AppTypeArg::Gemini,
         AppType::OpenCode => AppTypeArg::Opencode,
     };
-    
+
     commands::provider::remove(ctx, &name, app_arg, false)?;
     Ok(())
+}
+
+/// 交互式 MCP 管理
+fn interactive_mcp(ctx: &OutputContext) -> Result<()> {
+    println!("\n{}", "═══ MCP 服务器管理 ═══".cyan().bold());
+    println!();
+    println!("  {} {} - 列出所有 MCP 服务器", "1.".green(), "列出".white());
+    println!("  {} {} - 添加 MCP 服务器", "2.".green(), "添加".white());
+    println!("  {} {} - 从应用导入", "3.".green(), "导入".white());
+    println!("  {} {} - 返回主菜单", "0.".green(), "返回".white());
+    println!();
+
+    loop {
+        let choice = read_input("请选择: ")?;
+        match choice.as_str() {
+            "1" | "list" => {
+                commands::mcp::list(ctx, AppTypeArg::All, false)?;
+                return Ok(());
+            }
+            "2" | "add" => {
+                println!("\n{}", "添加 MCP 服务器:".white().bold());
+                let id = read_required("服务器 ID")?;
+                let command = read_required("执行命令")?;
+                let args_str = read_optional("命令参数 (空格分隔)", None)?;
+                let args: Vec<String> = args_str
+                    .map(|s| s.split_whitespace().map(|s| s.to_string()).collect())
+                    .unwrap_or_default();
+                let name = read_optional("显示名称", None)?;
+                let description = read_optional("描述", None)?;
+
+                commands::mcp::add(ctx, &id, &command, args, vec![], name, description)?;
+                return Ok(());
+            }
+            "3" | "import" => {
+                commands::mcp::import(ctx, None)?;
+                return Ok(());
+            }
+            "0" | "q" | "back" => return Ok(()),
+            _ => println!("{}", "无效选择".yellow()),
+        }
+    }
+}
+
+/// 交互式 Prompt 管理
+fn interactive_prompt(ctx: &OutputContext) -> Result<()> {
+    println!("\n{}", "═══ Prompts 管理 ═══".cyan().bold());
+    println!();
+    println!("  {} {} - 列出所有 Prompts", "1.".green(), "列出".white());
+    println!("  {} {} - 添加 Prompt", "2.".green(), "添加".white());
+    println!("  {} {} - 从应用导入", "3.".green(), "导入".white());
+    println!("  {} {} - 返回主菜单", "0.".green(), "返回".white());
+    println!();
+
+    loop {
+        let choice = read_input("请选择: ")?;
+        match choice.as_str() {
+            "1" | "list" => {
+                commands::prompt::list(ctx, AppTypeArg::All)?;
+                return Ok(());
+            }
+            "2" | "add" => {
+                println!("\n{}", "添加 Prompt:".white().bold());
+                let app_type = select_app_type()?;
+                let app_arg = match app_type {
+                    AppType::Claude => AppTypeArg::Claude,
+                    AppType::Codex => AppTypeArg::Codex,
+                    AppType::Gemini => AppTypeArg::Gemini,
+                    AppType::OpenCode => AppTypeArg::Opencode,
+                };
+                let name = read_required("Prompt 名称")?;
+                let content = read_required("Prompt 内容")?;
+                let description = read_optional("描述", None)?;
+
+                commands::prompt::add(ctx, app_arg, &name, Some(content), None, description)?;
+                return Ok(());
+            }
+            "3" | "import" => {
+                commands::prompt::import(ctx, AppTypeArg::All)?;
+                return Ok(());
+            }
+            "0" | "q" | "back" => return Ok(()),
+            _ => println!("{}", "无效选择".yellow()),
+        }
+    }
+}
+
+/// 交互式 Skill 管理
+fn interactive_skill(ctx: &OutputContext) -> Result<()> {
+    println!("\n{}", "═══ Skills 管理 ═══".cyan().bold());
+    println!();
+    println!("  {} {} - 列出所有 Skills", "1.".green(), "列出".white());
+    println!("  {} {} - 从 GitHub 安装", "2.".green(), "安装".white());
+    println!("  {} {} - 扫描本地目录", "3.".green(), "扫描".white());
+    println!("  {} {} - 同步到所有应用", "4.".green(), "同步".white());
+    println!("  {} {} - 返回主菜单", "0.".green(), "返回".white());
+    println!();
+
+    loop {
+        let choice = read_input("请选择: ")?;
+        match choice.as_str() {
+            "1" | "list" => {
+                commands::skill::list(ctx, AppTypeArg::All, true)?;
+                return Ok(());
+            }
+            "2" | "install" => {
+                println!("\n{}", "安装 Skill:".white().bold());
+                let repo = read_required("GitHub 仓库 (owner/name)")?;
+                let branch = read_optional("分支", Some("main"))?;
+
+                commands::skill::install(ctx, &repo, branch, None)?;
+                return Ok(());
+            }
+            "3" | "scan" => {
+                commands::skill::scan(ctx)?;
+                return Ok(());
+            }
+            "4" | "sync" => {
+                commands::skill::sync(ctx)?;
+                return Ok(());
+            }
+            "0" | "q" | "back" => return Ok(()),
+            _ => println!("{}", "无效选择".yellow()),
+        }
+    }
+}
+
+/// 交互式代理设置
+fn interactive_proxy(ctx: &OutputContext) -> Result<()> {
+    println!("\n{}", "═══ 代理设置 ═══".cyan().bold());
+    println!();
+    println!("  {} {} - 查看当前代理", "1.".green(), "查看".white());
+    println!("  {} {} - 设置代理", "2.".green(), "设置".white());
+    println!("  {} {} - 清除代理", "3.".green(), "清除".white());
+    println!("  {} {} - 测试代理", "4.".green(), "测试".white());
+    println!("  {} {} - 扫描本地代理", "5.".green(), "扫描".white());
+    println!("  {} {} - 返回主菜单", "0.".green(), "返回".white());
+    println!();
+
+    loop {
+        let choice = read_input("请选择: ")?;
+        match choice.as_str() {
+            "1" | "get" => {
+                commands::proxy::get(ctx)?;
+                return Ok(());
+            }
+            "2" | "set" => {
+                let url = read_required("代理 URL (如 http://127.0.0.1:7890)")?;
+                commands::proxy::set(ctx, &url)?;
+                return Ok(());
+            }
+            "3" | "clear" => {
+                commands::proxy::clear(ctx)?;
+                return Ok(());
+            }
+            "4" | "test" => {
+                tokio::runtime::Runtime::new()
+                    .unwrap()
+                    .block_on(commands::proxy::test(ctx, None))?;
+                return Ok(());
+            }
+            "5" | "scan" => {
+                tokio::runtime::Runtime::new()
+                    .unwrap()
+                    .block_on(commands::proxy::scan(ctx))?;
+                return Ok(());
+            }
+            "0" | "q" | "back" => return Ok(()),
+            _ => println!("{}", "无效选择".yellow()),
+        }
+    }
+}
+
+/// 交互式端点测速
+fn interactive_speedtest(ctx: &OutputContext) -> Result<()> {
+    println!("\n{}", "═══ 端点测速 ═══".cyan().bold());
+    println!();
+    println!("将测试以下端点的延迟:");
+    println!("  - https://api.anthropic.com");
+    println!("  - https://api.openai.com");
+    println!("  - https://generativelanguage.googleapis.com");
+    println!();
+
+    let input = read_input("是否开始测试? [Y/n]: ")?;
+    if input.is_empty() || input.to_lowercase() == "y" {
+        tokio::runtime::Runtime::new()
+            .unwrap()
+            .block_on(commands::speedtest::test(ctx, vec![], 10, false))?;
+    }
+
+    Ok(())
+}
+
+/// 交互式环境检测
+fn interactive_env(ctx: &OutputContext) -> Result<()> {
+    println!("\n{}", "═══ 环境变量检测 ═══".cyan().bold());
+    println!();
+    println!("  {} {} - 检查环境变量冲突", "1.".green(), "检查".white());
+    println!("  {} {} - 列出相关环境变量", "2.".green(), "列出".white());
+    println!("  {} {} - 返回主菜单", "0.".green(), "返回".white());
+    println!();
+
+    loop {
+        let choice = read_input("请选择: ")?;
+        match choice.as_str() {
+            "1" | "check" => {
+                commands::env::check(ctx, AppTypeArg::All)?;
+                return Ok(());
+            }
+            "2" | "list" => {
+                commands::env::list(ctx, AppTypeArg::All)?;
+                return Ok(());
+            }
+            "0" | "q" | "back" => return Ok(()),
+            _ => println!("{}", "无效选择".yellow()),
+        }
+    }
 }
 
 /// 快速开始引导

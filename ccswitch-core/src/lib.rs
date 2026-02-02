@@ -11,11 +11,13 @@
 //! ├── config.rs        - 配置文件路径和读写
 //! ├── error.rs         - 统一错误类型
 //! ├── provider.rs      - 供应商数据结构
+//! ├── mcp.rs           - MCP 服务器数据结构
 //! ├── app_config.rs    - 应用类型定义
 //! ├── settings.rs      - 本地设置管理
 //! ├── database/        - SQLite 数据持久化
 //! │   ├── mod.rs
 //! │   ├── schema.rs
+//! │   ├── mcp.rs
 //! │   └── dao/
 //! └── services/        - 业务逻辑服务层
 //!     ├── mod.rs
@@ -54,9 +56,12 @@ pub mod app_config;
 pub mod config;
 pub mod database;
 pub mod error;
+pub mod mcp;
+pub mod prompt;
 pub mod provider;
 pub mod services;
 pub mod settings;
+pub mod skill;
 pub mod store;
 
 // 公共类型导出
@@ -67,8 +72,14 @@ pub use config::{
 };
 pub use database::Database;
 pub use error::AppError;
+pub use mcp::{McpServer, McpStdioConfig};
+pub use prompt::Prompt;
 pub use provider::{Provider, ProviderManager, ProviderMeta};
-pub use services::{ConfigService, ProviderService};
+pub use skill::{Skill, SkillRepo};
+pub use services::{
+    ConfigService, EnvCheckerService, McpService, PromptService, ProxyService, ProviderService,
+    SkillService, SpeedtestService,
+};
 pub use settings::AppSettings;
 pub use store::AppState;
 

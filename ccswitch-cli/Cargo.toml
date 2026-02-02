@@ -1,6 +1,6 @@
 [package]
 name = "ccswitch-cli"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["CC-Switch Contributors"]
 description = "CLI tool for managing Claude Code, Codex, and Gemini CLI configurations"

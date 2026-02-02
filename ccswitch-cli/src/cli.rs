@@ -258,6 +258,70 @@ pub enum Commands {
         action: ConfigAction,
     },
 
+    /// 📦 MCP 服务器管理
+    #[command(
+        long_about = "管理 MCP (Model Context Protocol) 服务器配置。\n\n示例:\n  cc-switch mcp list                列出所有 MCP 服务器\n  cc-switch mcp add my-server --command npx --args \"-y\" \"@test/server\"\n  cc-switch mcp toggle my-server --app claude --enable"
+    )]
+    Mcp {
+        #[command(subcommand)]
+        action: McpAction,
+    },
+
+    /// 📝 Prompt 管理
+    #[command(
+        long_about = "管理各应用的系统提示词 (CLAUDE.md, AGENTS.md 等)。\n\n示例:\n  cc-switch prompt list --app claude    列出 Claude 的 Prompts\n  cc-switch prompt add \"My Prompt\" --app claude --content \"# My Prompt\"\n  cc-switch prompt enable my-prompt --app claude"
+    )]
+    Prompt {
+        #[command(subcommand)]
+        action: PromptAction,
+    },
+
+    /// 🌐 代理设置
+    #[command(
+        long_about = "管理全局代理设置。\n\n示例:\n  cc-switch proxy get              查看当前代理\n  cc-switch proxy set http://127.0.0.1:7890\n  cc-switch proxy test             测试代理连接\n  cc-switch proxy scan             扫描本地代理"
+    )]
+    Proxy {
+        #[command(subcommand)]
+        action: ProxyAction,
+    },
+
+    /// ⚡ 端点测速
+    #[command(
+        visible_alias = "speed",
+        long_about = "测试 API 端点的延迟。\n\n示例:\n  cc-switch speedtest                    测试默认端点\n  cc-switch speedtest https://api.example.com\n  cc-switch speedtest --timeout 5"
+    )]
+    Speedtest {
+        /// 要测试的 URL 列表
+        #[arg(num_args = 0..)]
+        urls: Vec<String>,
+
+        /// 超时时间（秒）
+        #[arg(long, default_value = "10")]
+        timeout: u64,
+
+        /// 使用全局代理
+        #[arg(long)]
+        proxy: bool,
+    },
+
+    /// 🔍 环境变量检测
+    #[command(
+        long_about = "检测可能与 AI CLI 工具冲突的环境变量。\n\n示例:\n  cc-switch env check              检查所有应用\n  cc-switch env check --app claude 只检查 Claude\n  cc-switch env list               列出相关环境变量"
+    )]
+    Env {
+        #[command(subcommand)]
+        action: EnvAction,
+    },
+
+    /// 🧩 Skills 管理
+    #[command(
+        long_about = "管理各应用的 Skills 扩展。\n\n示例:\n  cc-switch skill list                列出所有 Skills\n  cc-switch skill install owner/repo  从 GitHub 安装 Skill\n  cc-switch skill toggle my-skill --app claude --enable"
+    )]
+    Skill {
+        #[command(subcommand)]
+        action: SkillAction,
+    },
+
     /// ℹ️ 显示版本信息
     Version,
 }
@@ -293,4 +357,324 @@ pub enum ExportFormatArg {
     Json,
     Yaml,
     Toml,
+}
+
+/// MCP 操作子命令
+#[derive(Subcommand, Debug)]
+pub enum McpAction {
+    /// 📋 列出所有 MCP 服务器
+    #[command(visible_alias = "ls")]
+    List {
+        /// 筛选应用类型
+        #[arg(short, long, value_enum, default_value = "all")]
+        app: AppTypeArg,
+
+        /// 显示详细配置
+        #[arg(short, long)]
+        detail: bool,
+    },
+
+    /// ➕ 添加 MCP 服务器
+    Add {
+        /// 服务器 ID
+        id: String,
+
+        /// 执行命令
+        #[arg(long)]
+        command: String,
+
+        /// 命令参数
+        #[arg(long, num_args = 1..)]
+        args: Vec<String>,
+
+        /// 环境变量 (格式: KEY=VALUE)
+        #[arg(long, short, num_args = 1..)]
+        env: Vec<String>,
+
+        /// 显示名称
+        #[arg(long)]
+        name: Option<String>,
+
+        /// 描述
+        #[arg(long)]
+        description: Option<String>,
+    },
+
+    /// ✏️ 更新 MCP 服务器
+    Update {
+        /// 服务器 ID
+        id: String,
+
+        /// 新名称
+        #[arg(long)]
+        name: Option<String>,
+
+        /// 新命令
+        #[arg(long)]
+        command: Option<String>,
+
+        /// 新参数
+        #[arg(long, num_args = 1..)]
+        args: Option<Vec<String>>,
+
+        /// 新描述
+        #[arg(long)]
+        description: Option<String>,
+    },
+
+    /// ❌ 删除 MCP 服务器
+    #[command(visible_alias = "rm")]
+    Remove {
+        /// 服务器 ID
+        id: String,
+
+        /// 跳过确认
+        #[arg(short = 'y', long)]
+        yes: bool,
+    },
+
+    /// 🔄 切换应用启用状态
+    Toggle {
+        /// 服务器 ID
+        id: String,
+
+        /// 应用类型
+        #[arg(short, long, value_enum)]
+        app: AppTypeArg,
+
+        /// 启用
+        #[arg(long, conflicts_with = "disable")]
+        enable: bool,
+
+        /// 禁用
+        #[arg(long, conflicts_with = "enable")]
+        disable: bool,
+    },
+
+    /// 📥 从应用导入 MCP 配置
+    Import {
+        /// 从指定应用导入
+        #[arg(long, value_enum)]
+        from: Option<AppTypeArg>,
+    },
+
+    /// 🔍 显示 MCP 服务器详情
+    Show {
+        /// 服务器 ID
+        id: String,
+    },
+}
+
+/// Prompt 操作子命令
+#[derive(Subcommand, Debug)]
+pub enum PromptAction {
+    /// 📋 列出所有 Prompts
+    #[command(visible_alias = "ls")]
+    List {
+        /// 筛选应用类型
+        #[arg(short, long, value_enum, default_value = "all")]
+        app: AppTypeArg,
+    },
+
+    /// ➕ 添加 Prompt
+    Add {
+        /// Prompt 名称
+        name: String,
+
+        /// 应用类型
+        #[arg(short, long, value_enum)]
+        app: AppTypeArg,
+
+        /// Prompt 内容
+        #[arg(long)]
+        content: Option<String>,
+
+        /// 从文件读取内容
+        #[arg(long, value_name = "FILE")]
+        file: Option<String>,
+
+        /// 描述
+        #[arg(long)]
+        description: Option<String>,
+    },
+
+    /// ✏️ 更新 Prompt
+    Update {
+        /// Prompt ID
+        id: String,
+
+        /// 应用类型
+        #[arg(short, long, value_enum)]
+        app: AppTypeArg,
+
+        /// 新名称
+        #[arg(long)]
+        name: Option<String>,
+
+        /// 新内容
+        #[arg(long)]
+        content: Option<String>,
+
+        /// 新描述
+        #[arg(long)]
+        description: Option<String>,
+    },
+
+    /// ❌ 删除 Prompt
+    #[command(visible_alias = "rm")]
+    Remove {
+        /// Prompt ID
+        id: String,
+
+        /// 应用类型
+        #[arg(short, long, value_enum)]
+        app: AppTypeArg,
+
+        /// 跳过确认
+        #[arg(short = 'y', long)]
+        yes: bool,
+    },
+
+    /// ✅ 启用 Prompt
+    Enable {
+        /// Prompt ID
+        id: String,
+
+        /// 应用类型
+        #[arg(short, long, value_enum)]
+        app: AppTypeArg,
+    },
+
+    /// 🔍 显示 Prompt 详情
+    Show {
+        /// Prompt ID
+        id: String,
+
+        /// 应用类型
+        #[arg(short, long, value_enum, default_value = "all")]
+        app: AppTypeArg,
+    },
+
+    /// 📥 从应用导入 Prompt
+    Import {
+        /// 应用类型
+        #[arg(short, long, value_enum, default_value = "all")]
+        app: AppTypeArg,
+    },
+}
+
+/// 代理操作子命令
+#[derive(Subcommand, Debug)]
+pub enum ProxyAction {
+    /// 🔍 查看当前代理设置
+    Get,
+
+    /// ⚙️ 设置全局代理
+    Set {
+        /// 代理 URL (http://host:port 或 socks5://host:port)
+        url: String,
+    },
+
+    /// ❌ 清除代理设置
+    Clear,
+
+    /// 🧪 测试代理连接
+    Test {
+        /// 指定代理 URL（不指定则使用当前设置）
+        #[arg(long)]
+        url: Option<String>,
+    },
+
+    /// 🔍 扫描本地代理
+    Scan,
+}
+
+/// 环境变量操作子命令
+#[derive(Subcommand, Debug)]
+pub enum EnvAction {
+    /// 🔍 检查环境变量冲突
+    Check {
+        /// 筛选应用类型
+        #[arg(short, long, value_enum, default_value = "all")]
+        app: AppTypeArg,
+    },
+
+    /// 📋 列出相关环境变量
+    #[command(visible_alias = "ls")]
+    List {
+        /// 筛选应用类型
+        #[arg(short, long, value_enum, default_value = "all")]
+        app: AppTypeArg,
+    },
+}
+
+/// Skill 操作子命令
+#[derive(Subcommand, Debug)]
+pub enum SkillAction {
+    /// 📋 列出所有 Skills
+    #[command(visible_alias = "ls")]
+    List {
+        /// 筛选应用类型
+        #[arg(short, long, value_enum, default_value = "all")]
+        app: AppTypeArg,
+
+        /// 显示详细信息
+        #[arg(short, long)]
+        detail: bool,
+    },
+
+    /// 📥 从 GitHub 安装 Skill
+    Install {
+        /// GitHub 仓库 (格式: owner/name)
+        repo: String,
+
+        /// 分支名称
+        #[arg(long, default_value = "main")]
+        branch: Option<String>,
+
+        /// 安装后启用的应用
+        #[arg(short, long, value_enum)]
+        app: Option<AppTypeArg>,
+    },
+
+    /// ❌ 卸载 Skill
+    #[command(visible_alias = "rm")]
+    Uninstall {
+        /// Skill ID
+        id: String,
+
+        /// 跳过确认
+        #[arg(short = 'y', long)]
+        yes: bool,
+    },
+
+    /// 🔄 切换应用启用状态
+    Toggle {
+        /// Skill ID
+        id: String,
+
+        /// 应用类型
+        #[arg(short, long, value_enum)]
+        app: AppTypeArg,
+
+        /// 启用
+        #[arg(long, conflicts_with = "disable")]
+        enable: bool,
+
+        /// 禁用
+        #[arg(long, conflicts_with = "enable")]
+        disable: bool,
+    },
+
+    /// 🔍 扫描本地 Skills 目录
+    Scan,
+
+    /// 🔄 同步 Skills 到所有应用
+    Sync,
+
+    /// 🔍 显示 Skill 详情
+    Show {
+        /// Skill ID
+        id: String,
+    },
 }

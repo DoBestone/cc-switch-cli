@@ -10,9 +10,16 @@
 ## 特性
 
 - 🖥️ **纯 CLI** - 无 GUI 依赖，可在 SSH 会话中使用
+- 🎮 **交互式菜单** - 新手友好的图形化菜单界面
 - 🔄 **供应商切换** - 快速切换不同的 API 供应商配置
 - 📋 **多应用支持** - Claude Code、Codex CLI、Gemini CLI、OpenCode
-- 📦 **单一可执行文件** - 编译后仅需一个二进制文件
+- 📦 **MCP 服务器管理** - 管理 Model Context Protocol 服务器
+- 📝 **Prompts 管理** - 管理系统提示词
+- 🧩 **Skills 扩展** - 从 GitHub 安装和管理 Skills
+- 🌐 **代理支持** - 全局代理设置和自动扫描
+- ⚡ **端点测速** - 测试 API 端点延迟
+- 🔍 **环境检测** - 检测环境变量冲突
+- 💾 **单一可执行文件** - 编译后仅需一个二进制文件
 - 🔧 **可扩展** - 代码结构清晰，便于后续增加 TUI 支持
 
 ## 安装
@@ -37,6 +44,19 @@ sudo cp target/release/cc-switch /usr/local/bin/
 - Linux / macOS / Windows
 
 ## 使用方法
+
+### 🎮 交互式菜单（推荐）
+
+直接运行不带参数，进入交互式菜单：
+
+```bash
+cc-switch
+```
+
+菜单功能包括：
+- **供应商管理**：列出、查看状态、切换、添加、删除
+- **扩展功能**：MCP 服务器、Prompts、Skills 管理
+- **工具**：代理设置、端点测速、环境检测、查看配置
 
 ### 基本命令
 
@@ -90,6 +110,80 @@ cc-switch list -o yaml
 
 # 禁用彩色输出
 cc-switch list --no-color
+```
+
+### 扩展功能
+
+#### MCP 服务器管理
+
+```bash
+# 列出 MCP 服务器
+cc-switch mcp list
+
+# 添加 MCP 服务器
+cc-switch mcp add myserver --command "node" --args "server.js"
+
+# 从应用导入
+cc-switch mcp import
+```
+
+#### Prompts 管理
+
+```bash
+# 列出 Prompts
+cc-switch prompt list
+
+# 添加 Prompt
+cc-switch prompt add --app claude --name "helper" --content "You are a helpful assistant"
+
+# 从应用导入
+cc-switch prompt import
+```
+
+#### Skills 管理
+
+```bash
+# 列出 Skills
+cc-switch skill list
+
+# 从 GitHub 安装
+cc-switch skill install owner/repo
+
+# 扫描本地目录
+cc-switch skill scan
+
+# 同步到所有应用
+cc-switch skill sync
+```
+
+#### 代理设置
+
+```bash
+# 查看代理
+cc-switch proxy get
+
+# 设置代理
+cc-switch proxy set http://127.0.0.1:7890
+
+# 清除代理
+cc-switch proxy clear
+
+# 测试代理
+cc-switch proxy test
+
+# 扫描本地代理
+cc-switch proxy scan
+```
+
+#### 工具命令
+
+```bash
+# 端点测速
+cc-switch speedtest
+
+# 环境变量检测
+cc-switch env check
+cc-switch env list
 ```
 
 ## 配置文件位置
@@ -156,13 +250,27 @@ cc-switch-cli/
 - 重构为纯 Rust CLI 工具
 - 保持数据库格式兼容
 
+## 功能对比
+
+| 功能 | 命令行 | 交互式菜单 |
+|------|--------|------------|
+| 供应商管理 | ✅ | ✅ |
+| MCP 服务器 | ✅ | ✅ |
+| Prompts | ✅ | ✅ |
+| Skills | ✅ | ✅ |
+| 代理设置 | ✅ | ✅ |
+| 端点测速 | ✅ | ✅ |
+| 环境检测 | ✅ | ✅ |
+| 批量操作 | ✅ | ❌ |
+
 ## 后续计划
 
 - [ ] TUI 支持 (使用 ratatui)
 - [ ] 订阅同步功能
 - [ ] 配置导入导出
-- [ ] MCP 服务器管理
-- [ ] 批量操作支持
+- [x] ✅ MCP 服务器管理
+- [x] ✅ 交互式菜单
+- [ ] 批量操作增强
 
 ## 许可证
 
