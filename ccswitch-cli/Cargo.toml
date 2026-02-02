@@ -1,0 +1,46 @@
+[package]
+name = "ccswitch-cli"
+version = "0.1.0"
+edition = "2021"
+authors = ["CC-Switch Contributors"]
+description = "CLI tool for managing Claude Code, Codex, and Gemini CLI configurations"
+license = "MIT"
+repository = "https://github.com/farion1231/cc-switch"
+rust-version = "1.70.0"
+
+[[bin]]
+name = "cc-switch"
+path = "src/main.rs"
+
+[dependencies]
+# Core library
+ccswitch-core = { path = "../ccswitch-core" }
+
+# CLI framework
+clap = { version = "4.5", features = ["derive", "env", "color"] }
+
+# Output formatting
+colored = "3"
+tabled = "0.18"
+indicatif = "0.17"
+
+# Async runtime
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+
+# Serialization (for JSON/YAML output)
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+chrono = "0.4"
+
+# Logging
+log = "0.4"
+env_logger = "0.11"
+
+# Error handling
+anyhow = "1.0"
+
+[dev-dependencies]
+assert_cmd = "2"
+predicates = "3"
+tempfile = "3"

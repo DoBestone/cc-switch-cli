@@ -1,0 +1,25 @@
+# 构建产物
+/target/
+**/target/
+*.db
+*.db-journal
+
+# 依赖
+Cargo.lock
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 日志
+*.log
+
+# 原始项目（仅供参考）
+/original/

@@ -1,0 +1,20 @@
+[workspace]
+resolver = "2"
+members = [
+    "ccswitch-core",
+    "ccswitch-cli",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/farion1231/cc-switch"
+rust-version = "1.70.0"
+
+[profile.release]
+codegen-units = 1
+lto = "thin"
+opt-level = "s"
+panic = "unwind"
+strip = "symbols"
