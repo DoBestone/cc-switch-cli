@@ -16,7 +16,7 @@
 
 ```bash
 # 克隆仓库
-git clone <repo-url>
+git clone https://github.com/DoBestone/cc-switch-cli.git
 cd cc-switch-cli
 
 # 编译 release 版本
