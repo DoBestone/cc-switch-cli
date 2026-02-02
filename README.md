@@ -2,6 +2,11 @@
 
 纯命令行版本的 CC-Switch，用于在 Linux 服务器（无图形界面）上管理 Claude Code、Codex、Gemini CLI 等 AI 编程工具的供应商配置。
 
+> **📢 致谢说明**  
+> 本项目基于 [farion1231/cc-switch](https://github.com/farion1231/cc-switch) 进行二次开发。  
+> 原项目是一个功能完善的图形界面工具，本项目将其重构为纯命令行版本，以适配 Linux 服务器环境。  
+> 感谢原作者 [@farion1231](https://github.com/farion1231) 的优秀工作！
+
 ## 特性
 
 - 🖥️ **纯 CLI** - 无 GUI 依赖，可在 SSH 会话中使用
