@@ -42,20 +42,45 @@ wget -qO- https://raw.githubusercontent.com/DoBestone/cc-switch-cli/main/install
 3. 如果没有预编译版本，自动安装 Rust 并从源码编译
 4. 将 `cc-switch` 安装到 `/usr/local/bin`
 
-### � 更新到最新版
+### 🔄 更新到最新版
 
 如果您已安装 cc-switch，可以使用以下方式更新：
 
 ```bash
-# 方式一：使用内置命令更新
+# 方式一：使用内置命令更新（推荐）
 cc-switch self-update
 
-# 方式二：使用更新脚本（适用于 0.1.0 等旧版本用户）
+# 检查更新但不安装
+cc-switch self-update --check
+
+# 方式二：使用更新脚本（适用于旧版本或更新失败时）
 curl -fsSL https://raw.githubusercontent.com/DoBestone/cc-switch-cli/main/update.sh | bash
 
-# 强制重新安装
-CC_SWITCH_FORCE=1 bash <(curl -fsSL https://raw.githubusercontent.com/DoBestone/cc-switch-cli/main/update.sh)
+# 方式三：重新运行安装脚本
+curl -fsSL https://raw.githubusercontent.com/DoBestone/cc-switch-cli/main/install.sh | bash
 ```
+
+**高级选项：**
+
+```bash
+# 强制重新安装（即使已是最新版）
+CC_SWITCH_FORCE=1 bash <(curl -fsSL https://raw.githubusercontent.com/DoBestone/cc-switch-cli/main/update.sh)
+
+# 指定安装特定版本
+CC_SWITCH_VERSION=1.0.2 bash <(curl -fsSL https://raw.githubusercontent.com/DoBestone/cc-switch-cli/main/update.sh)
+
+# 跳过 SHA256 校验（不推荐，仅在网络问题时使用）
+CC_SWITCH_NO_VERIFY=1 bash <(curl -fsSL https://raw.githubusercontent.com/DoBestone/cc-switch-cli/main/update.sh)
+```
+
+**更新特性：**
+- ✅ 自动检测最新版本
+- ✅ 智能下载预编译二进制（Linux 优先 musl 静态版本）
+- ✅ SHA256 校验和验证，确保文件完整性
+- ✅ 自动备份旧版本（带时间戳）
+- ✅ 失败时自动回退到源码编译
+- ✅ 支持 curl 或 wget 下载工具
+- ✅ 跨平台支持（Linux/macOS/Windows）
 
 ### �📦 使用 Cargo 安装
 
