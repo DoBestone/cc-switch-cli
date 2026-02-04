@@ -4,8 +4,6 @@
 
 use std::time::{Duration, Instant};
 
-use crate::error::AppError;
-
 /// 测速服务
 pub struct SpeedtestService;
 

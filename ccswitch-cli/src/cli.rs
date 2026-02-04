@@ -410,6 +410,34 @@ pub enum Commands {
         action: SkillAction,
     },
 
+    /// 🔄 检测更新/自动更新
+    #[command(
+        name = "self-update",
+        visible_alias = "upgrade",
+        long_about = r#"检测新版本并自动更新 cc-switch CLI 工具。
+
+示例:
+  cc-switch self-update           检测并执行更新
+  cc-switch self-update --check   仅检测，不更新
+  cc-switch self-update --force   强制重新安装最新版
+
+更新方式:
+  1. 优先下载 GitHub Release 预编译二进制
+  2. 回退使用 cargo install --git 从源码编译"#
+    )]
+    SelfUpdate {
+        #[command(subcommand)]
+        action: Option<SelfUpdateAction>,
+
+        /// 仅检测是否有更新
+        #[arg(long, short = 'c', help = "仅检测，不执行更新")]
+        check: bool,
+
+        /// 强制更新（即使已是最新版）
+        #[arg(long, short = 'f', help = "强制重新安装")]
+        force: bool,
+    },
+
     /// ℹ️ 显示版本信息
     Version,
 }
@@ -764,5 +792,19 @@ pub enum SkillAction {
     Show {
         /// Skill ID
         id: String,
+    },
+}
+
+/// 自动更新操作子命令
+#[derive(Subcommand, Debug)]
+pub enum SelfUpdateAction {
+    /// 🔍 检测是否有新版本
+    Check,
+    
+    /// ⬆️ 执行更新
+    Run {
+        /// 强制重新安装
+        #[arg(long, short = 'f')]
+        force: bool,
     },
 }

@@ -5,7 +5,7 @@
 use anyhow::Result;
 use ccswitch_core::{AppState, ProxyService};
 
-use crate::output::{print_error, print_info, print_success, OutputContext};
+use crate::output::{print_info, print_success, OutputContext};
 
 /// 获取当前代理设置
 pub fn get(_ctx: &OutputContext) -> Result<()> {

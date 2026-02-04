@@ -12,10 +12,11 @@ pub mod proxy;
 pub mod skill;
 pub mod speedtest;
 pub mod status;
+pub mod update;
 
 use anyhow::Result;
 
-use crate::cli::{Cli, Commands, EnvAction, McpAction, PromptAction, ProxyAction, SkillAction};
+use crate::cli::{Cli, Commands, EnvAction, McpAction, PromptAction, ProxyAction, SkillAction, SelfUpdateAction};
 use crate::output::OutputContext;
 
 /// 执行 CLI 命令
@@ -71,6 +72,7 @@ pub fn execute(cli: Cli) -> Result<()> {
         } => execute_speedtest(&ctx, urls, timeout, proxy),
         Commands::Env { action } => execute_env(&ctx, action),
         Commands::Skill { action } => execute_skill(&ctx, action),
+        Commands::SelfUpdate { action, check, force } => execute_self_update(&ctx, action, check, force),
         Commands::Version => {
             println!("cc-switch {}", ccswitch_core::VERSION);
             Ok(())
@@ -216,5 +218,31 @@ fn execute_skill(ctx: &OutputContext, action: SkillAction) -> Result<()> {
         SkillAction::Scan => skill::scan(ctx),
         SkillAction::Sync => skill::sync(ctx),
         SkillAction::Show { id } => skill::show(ctx, &id),
+    }
+}
+
+/// 执行 SelfUpdate 子命令
+fn execute_self_update(
+    ctx: &OutputContext, 
+    action: Option<SelfUpdateAction>,
+    check: bool,
+    force: bool,
+) -> Result<()> {
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    
+    match action {
+        Some(SelfUpdateAction::Check) => {
+            rt.block_on(update::show_status(ctx, true))
+        }
+        Some(SelfUpdateAction::Run { force }) => {
+            rt.block_on(update::self_update(ctx, force))
+        }
+        None => {
+            if check {
+                rt.block_on(update::show_status(ctx, true))
+            } else {
+                rt.block_on(update::self_update(ctx, force))
+            }
+        }
     }
 }

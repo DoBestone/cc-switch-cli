@@ -11,6 +11,7 @@ use crate::cli::OutputFormat;
 /// 输出上下文
 pub struct OutputContext {
     pub format: OutputFormat,
+    #[allow(dead_code)]
     pub no_color: bool,
 }
 
@@ -66,6 +67,7 @@ pub struct PathRow {
 }
 
 /// 打印表格
+#[allow(dead_code)]
 pub fn print_table<T: Tabled>(ctx: &OutputContext, data: Vec<T>) {
     match ctx.format {
         OutputFormat::Table => {

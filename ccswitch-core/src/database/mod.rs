@@ -21,6 +21,7 @@ use serde::Serialize;
 use std::sync::Mutex;
 
 /// 当前 Schema 版本号
+#[allow(dead_code)]
 pub(crate) const SCHEMA_VERSION: i32 = 5;
 
 /// 安全地序列化 JSON

@@ -1,7 +1,7 @@
 //! Skill 数据库操作模块
 
 use crate::app_config::McpApps;
-use crate::database::{lock_conn, to_json_string, Database};
+use crate::database::{lock_conn, Database};
 use crate::error::AppError;
 use crate::skill::{Skill, SkillRepo};
 use indexmap::IndexMap;

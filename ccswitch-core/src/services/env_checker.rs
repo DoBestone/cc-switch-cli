@@ -2,7 +2,6 @@
 //!
 //! 检测可能与 AI CLI 工具冲突的环境变量。
 
-use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 

@@ -20,7 +20,8 @@
 - 🌐 **代理支持** - 全局代理设置和自动扫描
 - ⚡ **端点测速** - 测试 API 端点延迟
 - 🔍 **环境检测** - 检测环境变量冲突
-- 💾 **单一可执行文件** - 编译后仅需一个二进制文件
+- � **自动更新** - 检测新版本并一键更新
+- �💾 **单一可执行文件** - 编译后仅需一个二进制文件
 - 🔧 **可扩展** - 代码结构清晰，便于后续增加 TUI 支持
 
 ## 安装
@@ -41,7 +42,22 @@ wget -qO- https://raw.githubusercontent.com/DoBestone/cc-switch-cli/main/install
 3. 如果没有预编译版本，自动安装 Rust 并从源码编译
 4. 将 `cc-switch` 安装到 `/usr/local/bin`
 
-### 📦 使用 Cargo 安装
+### � 更新到最新版
+
+如果您已安装 cc-switch，可以使用以下方式更新：
+
+```bash
+# 方式一：使用内置命令更新
+cc-switch self-update
+
+# 方式二：使用更新脚本（适用于 0.1.0 等旧版本用户）
+curl -fsSL https://raw.githubusercontent.com/DoBestone/cc-switch-cli/main/update.sh | bash
+
+# 强制重新安装
+CC_SWITCH_FORCE=1 bash <(curl -fsSL https://raw.githubusercontent.com/DoBestone/cc-switch-cli/main/update.sh)
+```
+
+### �📦 使用 Cargo 安装
 
 ```bash
 # 直接从 crates.io 安装（需要先发布）
@@ -227,6 +243,22 @@ cc-switch speedtest
 # 环境变量检测
 cc-switch env check
 cc-switch env list
+```
+
+#### 自动更新
+
+```bash
+# 检测是否有新版本
+cc-switch self-update --check
+
+# 检测并执行更新
+cc-switch self-update
+
+# 强制重新安装最新版
+cc-switch self-update --force
+
+# 也可以使用 upgrade 别名
+cc-switch upgrade --check
 ```
 
 ## 配置文件位置

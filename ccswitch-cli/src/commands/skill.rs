@@ -6,7 +6,7 @@ use anyhow::Result;
 use colored::Colorize;
 use std::io::{self, Write};
 
-use ccswitch_core::{AppState, AppType, Skill, SkillService};
+use ccswitch_core::{AppState, Skill, SkillService};
 
 use crate::cli::AppTypeArg;
 use crate::output::{print_info, print_success, OutputContext};

@@ -138,6 +138,7 @@ pub fn main_menu() -> Result<()> {
     println!(" {} {} - 测试 API 端点延迟", "12.".green(), "端点测速".white());
     println!(" {} {} - 检测环境变量冲突", "13.".green(), "环境检测".white());
     println!(" {} {} - 查看配置文件路径", "14.".green(), "查看配置".white());
+    println!(" {} {} - 检测更新/自动更新", "15.".green(), "检测更新".white());
     println!();
     println!("  {} {} - 退出程序", "0.".green(), "退出".white());
     println!();
@@ -191,16 +192,19 @@ pub fn main_menu() -> Result<()> {
                 commands::config::show_paths(&ctx, AppTypeArg::All)?;
                 return Ok(());
             }
+            "15" | "update" | "upgrade" => {
+                return interactive_update(&ctx);
+            }
             "0" | "q" | "quit" | "exit" => {
                 println!("{}", "再见！".green());
                 return Ok(());
             }
             "" => {
                 // 空输入显示提示
-                println!("{}", "请输入 1-14 选择操作，或输入 0 退出".dimmed());
+                println!("{}", "请输入 1-15 选择操作，或输入 0 退出".dimmed());
             }
             _ => {
-                println!("{}", "无效选择，请输入 0-14".yellow());
+                println!("{}", "无效选择，请输入 0-15".yellow());
             }
         }
     }
@@ -609,7 +613,45 @@ fn interactive_env(ctx: &OutputContext) -> Result<()> {
     }
 }
 
+/// 交互式更新检测
+fn interactive_update(ctx: &OutputContext) -> Result<()> {
+    println!("\n{}", "═══ 检测更新 ═══".cyan().bold());
+    println!();
+    println!("  {} {} - 仅检查是否有新版本", "1.".green(), "检测更新".white());
+    println!("  {} {} - 检测并执行自动更新", "2.".green(), "自动更新".white());
+    println!("  {} {} - 强制重新安装最新版", "3.".green(), "强制更新".white());
+    println!("  {} {} - 返回主菜单", "0.".green(), "返回".white());
+    println!();
+
+    loop {
+        let choice = read_input("请选择: ")?;
+        match choice.as_str() {
+            "1" | "check" => {
+                tokio::runtime::Runtime::new()
+                    .unwrap()
+                    .block_on(commands::update::show_status(ctx, true))?;
+                return Ok(());
+            }
+            "2" | "update" | "upgrade" => {
+                tokio::runtime::Runtime::new()
+                    .unwrap()
+                    .block_on(commands::update::self_update(ctx, false))?;
+                return Ok(());
+            }
+            "3" | "force" => {
+                tokio::runtime::Runtime::new()
+                    .unwrap()
+                    .block_on(commands::update::self_update(ctx, true))?;
+                return Ok(());
+            }
+            "0" | "q" | "back" => return Ok(()),
+            _ => println!("{}", "无效选择".yellow()),
+        }
+    }
+}
+
 /// 快速开始引导
+#[allow(dead_code)]
 pub fn quick_start() -> Result<()> {
     println!();
     println!("{}", "🚀 欢迎使用 CC-Switch!".cyan().bold());

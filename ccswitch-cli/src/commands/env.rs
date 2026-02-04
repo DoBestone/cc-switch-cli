@@ -3,7 +3,7 @@
 //! 实现环境变量冲突检测的 CLI 命令。
 
 use anyhow::Result;
-use ccswitch_core::{AppType, EnvCheckerService};
+use ccswitch_core::EnvCheckerService;
 
 use crate::cli::AppTypeArg;
 use crate::output::{print_info, print_success, print_warning, OutputContext};

@@ -1,7 +1,7 @@
 //! list 命令实现
 
 use anyhow::Result;
-use ccswitch_core::{AppState, AppType, ProviderService};
+use ccswitch_core::{AppState, ProviderService};
 
 use crate::cli::AppTypeArg;
 use crate::output::{format_status, mask_api_key, print_providers, truncate, OutputContext, ProviderRow};
