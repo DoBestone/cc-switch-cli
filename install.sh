@@ -64,31 +64,43 @@ install_dependencies() {
 download_binary() {
     info "尝试下载预编译二进制..."
     
-    if [ "$VERSION" = "latest" ]; then
-        DOWNLOAD_URL="https://github.com/$REPO/releases/latest/download/${BINARY_NAME}-${PLATFORM}"
-    else
-        DOWNLOAD_URL="https://github.com/$REPO/releases/download/$VERSION/${BINARY_NAME}-${PLATFORM}"
-    fi
+    # 尝试多种二进制格式
+    local VARIANTS=("${PLATFORM}" "${PLATFORM}-musl")
     
-    # 尝试下载
-    if curl -fsSL --head "$DOWNLOAD_URL" &> /dev/null; then
-        TMP_FILE=$(mktemp)
-        curl -fsSL -o "$TMP_FILE" "$DOWNLOAD_URL" || return 1
-        chmod +x "$TMP_FILE"
-        
-        # 安装到目标目录
-        if [ -w "$INSTALL_DIR" ]; then
-            mv "$TMP_FILE" "$INSTALL_DIR/$BINARY_NAME"
+    for variant in "${VARIANTS[@]}"; do
+        if [ "$VERSION" = "latest" ]; then
+            DOWNLOAD_URL="https://github.com/$REPO/releases/latest/download/${BINARY_NAME}-${variant}"
         else
-            sudo mv "$TMP_FILE" "$INSTALL_DIR/$BINARY_NAME"
+            DOWNLOAD_URL="https://github.com/$REPO/releases/download/$VERSION/${BINARY_NAME}-${variant}"
         fi
         
-        success "已下载并安装预编译二进制"
-        return 0
-    else
-        warn "未找到预编译二进制，将从源码编译"
-        return 1
-    fi
+        info "尝试: ${BINARY_NAME}-${variant}"
+        
+        # 尝试下载
+        if curl -fsSL --head "$DOWNLOAD_URL" &> /dev/null; then
+            TMP_FILE=$(mktemp)
+            if curl -fsSL -o "$TMP_FILE" "$DOWNLOAD_URL" 2>/dev/null; then
+                chmod +x "$TMP_FILE"
+                
+                # 验证二进制文件
+                if [ -s "$TMP_FILE" ] && file "$TMP_FILE" | grep -q "executable"; then
+                    # 安装到目标目录
+                    if [ -w "$INSTALL_DIR" ]; then
+                        mv "$TMP_FILE" "$INSTALL_DIR/$BINARY_NAME"
+                    else
+                        sudo mv "$TMP_FILE" "$INSTALL_DIR/$BINARY_NAME"
+                    fi
+                    
+                    success "已下载并安装预编译二进制 (${variant})"
+                    return 0
+                fi
+            fi
+            rm -f "$TMP_FILE"
+        fi
+    done
+    
+    warn "未找到适合当前平台的预编译二进制"
+    return 1
 }
 
 # 从源码编译安装
@@ -166,13 +178,47 @@ main() {
     
     detect_platform
     
-    # 尝试下载预编译二进制，失败则从源码编译
-    if ! download_binary; then
-        build_from_source
+    # 尝试下载预编译二进制
+    if download_binary; then
+        verify_installation
+        show_usage
+        exit 0
     fi
     
-    verify_installation
-    show_usage
+    # 询问用户是否要从源码编译
+    echo ""
+    warn "未找到预编译二进制文件"
+    echo ""
+    echo "可选方案:"
+    echo -e "  ${GREEN}1.${NC} 从源码编译 (需要 Rust 工具链，约需 2GB 内存)"
+    echo -e "  ${GREEN}2.${NC} 手动下载预编译版本"
+    echo -e "  ${GREEN}3.${NC} 退出"
+    echo ""
+    
+    read -p "请选择 [1/2/3]: " choice
+    
+    case "$choice" in
+        1)
+            build_from_source
+            verify_installation
+            show_usage
+            ;;
+        2)
+            echo ""
+            echo "请访问 GitHub Releases 页面下载:"
+            echo -e "  ${CYAN}https://github.com/$REPO/releases/latest${NC}"
+            echo ""
+            echo "下载后手动安装:"
+            echo -e "  ${GREEN}chmod +x cc-switch-*${NC}"
+            echo -e "  ${GREEN}sudo mv cc-switch-* /usr/local/bin/cc-switch${NC}"
+            echo ""
+            exit 0
+            ;;
+        *)
+            info "已取消安装"
+            exit 0
+            ;;
+    esac
 }
 
 # 运行

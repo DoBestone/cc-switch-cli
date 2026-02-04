@@ -140,44 +140,76 @@ compare_versions() {
 download_and_install() {
     local version="$1"
     
-    # 构建下载 URL
-    if [ "$version" = "latest" ]; then
-        DOWNLOAD_URL="https://github.com/$REPO/releases/latest/download/${BINARY_NAME}-${PLATFORM}"
-    else
-        DOWNLOAD_URL="https://github.com/$REPO/releases/download/v${version}/${BINARY_NAME}-${PLATFORM}"
-    fi
+    # 尝试多种二进制格式
+    local VARIANTS=("${PLATFORM}" "${PLATFORM}-musl")
     
-    info "下载地址: $DOWNLOAD_URL"
+    for variant in "${VARIANTS[@]}"; do
+        if [ "$version" = "latest" ]; then
+            DOWNLOAD_URL="https://github.com/$REPO/releases/latest/download/${BINARY_NAME}-${variant}"
+        else
+            DOWNLOAD_URL="https://github.com/$REPO/releases/download/v${version}/${BINARY_NAME}-${variant}"
+        fi
+        
+        info "尝试下载: ${BINARY_NAME}-${variant}"
+        
+        # 创建临时文件
+        TMP_FILE=$(mktemp)
+        
+        # 下载
+        if curl -fsSL -o "$TMP_FILE" "$DOWNLOAD_URL" 2>/dev/null; then
+            # 验证下载
+            if [ -s "$TMP_FILE" ]; then
+                chmod +x "$TMP_FILE"
+                
+                # 验证二进制
+                if "$TMP_FILE" --version &>/dev/null; then
+                    # 成功，继续安装
+                    install_binary "$TMP_FILE"
+                    return 0
+                fi
+            fi
+        fi
+        
+        rm -f "$TMP_FILE"
+    done
     
-    # 创建临时文件
-    TMP_FILE=$(mktemp)
-    trap "rm -f '$TMP_FILE'" EXIT
+    # 所有下载都失败
+    warn "未找到适合当前平台的预编译二进制"
     
-    # 下载
-    info "正在下载..."
-    if ! curl -fsSL -o "$TMP_FILE" "$DOWNLOAD_URL" 2>/dev/null; then
-        warn "预编译二进制下载失败，尝试从源码编译..."
-        build_from_source
-        return
-    fi
+    echo ""
+    echo "可选方案:"
+    echo -e "  ${GREEN}1.${NC} 从源码编译 (需要 Rust 工具链，约需 2GB 内存)"
+    echo -e "  ${GREEN}2.${NC} 手动下载预编译版本"
+    echo -e "  ${GREEN}3.${NC} 退出"
+    echo ""
     
-    # 验证下载
-    if [ ! -s "$TMP_FILE" ]; then
-        warn "下载文件为空，尝试从源码编译..."
-        build_from_source
-        return
-    fi
+    read -p "请选择 [1/2/3]: " choice
     
-    # 设置执行权限
-    chmod +x "$TMP_FILE"
-    
-    # 验证二进制
-    if ! "$TMP_FILE" --version &>/dev/null; then
-        warn "二进制文件无效，尝试从源码编译..."
-        build_from_source
-        return
-    fi
-    
+    case "$choice" in
+        1)
+            build_from_source
+            ;;
+        2)
+            echo ""
+            echo "请访问 GitHub Releases 页面下载:"
+            echo -e "  ${CYAN}https://github.com/$REPO/releases/latest${NC}"
+            echo ""
+            echo "下载后手动安装:"
+            echo -e "  ${GREEN}chmod +x cc-switch-*${NC}"
+            echo -e "  ${GREEN}sudo mv cc-switch-* /usr/local/bin/cc-switch${NC}"
+            echo ""
+            exit 0
+            ;;
+        *)
+            info "已取消更新"
+            exit 0
+            ;;
+    esac
+}
+
+# 安装二进制文件
+install_binary() {
+    local TMP_FILE="$1"
     # 备份旧版本
     if [ -n "$CURRENT_BIN" ] && [ -f "$CURRENT_BIN" ]; then
         BACKUP_FILE="${CURRENT_BIN}.backup"
