@@ -52,6 +52,10 @@ pub struct Cli {
     #[arg(short, long, global = true, help = "显示详细信息")]
     pub verbose: bool,
 
+    /// 使用高级 TUI 界面
+    #[arg(long, global = true, help = "使用高级 TUI 界面（实验性功能）")]
+    pub tui: bool,
+
     /// 子命令
     #[command(subcommand)]
     pub command: Option<Commands>,

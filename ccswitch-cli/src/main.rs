@@ -23,6 +23,7 @@ mod cli;
 mod commands;
 mod interactive;
 mod output;
+mod tui;
 
 use anyhow::Result;
 use clap::Parser;
@@ -39,9 +40,13 @@ fn main() -> Result<()> {
     // 解析命令行参数
     let cli = Cli::parse();
 
-    // 如果没有子命令，进入交互式模式
+    // 如果没有子命令，检查是否启用 TUI 模式
     if cli.command.is_none() {
-        return interactive::main_menu();
+        if cli.tui {
+            return tui::run_tui();
+        } else {
+            return interactive::main_menu();
+        }
     }
 
     // 执行命令
