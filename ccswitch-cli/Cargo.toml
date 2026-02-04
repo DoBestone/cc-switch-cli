@@ -1,11 +1,11 @@
 [package]
 name = "ccswitch-cli"
-version = "0.2.0"
+version = "1.0.1"
 edition = "2021"
 authors = ["CC-Switch Contributors"]
 description = "CLI tool for managing Claude Code, Codex, and Gemini CLI configurations"
 license = "MIT"
-repository = "https://github.com/farion1231/cc-switch"
+repository = "https://github.com/DoBestone/cc-switch-cli"
 rust-version = "1.70.0"
 
 [[bin]]
