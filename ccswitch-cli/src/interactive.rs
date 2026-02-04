@@ -126,9 +126,182 @@ fn clear_screen() {
     }
 }
 
+/// 显示启动欢迎信息（类似 Claude CLI）
+fn show_welcome_banner() -> Result<()> {
+    let state = AppState::init()?;
+
+    // 获取当前供应商信息
+    let claude_provider = ccswitch_core::ProviderService::current(&state, AppType::Claude)
+        .ok()
+        .and_then(|id| {
+            let providers = ccswitch_core::ProviderService::list(&state, AppType::Claude).ok()?;
+            providers.get(&id).cloned()
+        });
+
+    let codex_provider = ccswitch_core::ProviderService::current(&state, AppType::Codex)
+        .ok()
+        .and_then(|id| {
+            let providers = ccswitch_core::ProviderService::list(&state, AppType::Codex).ok()?;
+            providers.get(&id).cloned()
+        });
+
+    let gemini_provider = ccswitch_core::ProviderService::current(&state, AppType::Gemini)
+        .ok()
+        .and_then(|id| {
+            let providers = ccswitch_core::ProviderService::list(&state, AppType::Gemini).ok()?;
+            providers.get(&id).cloned()
+        });
+
+    // 获取工作目录
+    let current_dir = std::env::current_dir()
+        .ok()
+        .and_then(|p| p.to_str().map(|s| s.to_string()))
+        .unwrap_or_else(|| "~".to_string());
+
+    // 顶部边框
+    println!("{}", "┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐".cyan());
+
+    // 标题行：版本和欢迎信息
+    let version = format!("CC-Switch v{}", ccswitch_core::VERSION);
+    println!("{} {:^48} {} {:104} {}",
+        "│".cyan(),
+        version.bright_white().bold(),
+        "│".cyan(),
+        "Tips for getting started".yellow(),
+        "│".cyan()
+    );
+
+    println!("{} {:^48} {} {:104} {}",
+        "│".cyan(),
+        "Welcome back!".bright_white().bold(),
+        "│".cyan(),
+        format!("Run {} to list all providers", "cc-switch list".green()),
+        "│".cyan()
+    );
+
+    // ASCII Art (简化的图标)
+    println!("{} {:^48} {} {:104} {}",
+        "│".cyan(),
+        "",
+        "│".cyan(),
+        format!("Run {} to see current status", "cc-switch status".green()),
+        "│".cyan()
+    );
+
+    println!("{} {:^48} {} {:104} {}",
+        "│".cyan(),
+        "    ╔═══╗".yellow(),
+        "│".cyan(),
+        "",
+        "│".cyan()
+    );
+
+    println!("{} {:^48} {} {:104} {}",
+        "│".cyan(),
+        "    ║ ∞ ║".yellow(),
+        "│".cyan(),
+        "Current providers".yellow().bold(),
+        "│".cyan()
+    );
+
+    println!("{} {:^48} {} {:104} {}",
+        "│".cyan(),
+        "    ╚═══╝".yellow(),
+        "│".cyan(),
+        "",
+        "│".cyan()
+    );
+
+    // 当前供应商信息 - Claude
+    let claude_info = if let Some(provider) = &claude_provider {
+        let model = provider.settings_config.get("model")
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown");
+        format!("{} → {} ({})", "Claude Code".cyan(), provider.name.green(), model.dimmed())
+    } else {
+        format!("{} → {}", "Claude Code".cyan(), "Not configured".dimmed())
+    };
+
+    println!("{} {:^48} {} {:104} {}",
+        "│".cyan(),
+        "",
+        "│".cyan(),
+        claude_info,
+        "│".cyan()
+    );
+
+    // 当前供应商信息 - Codex
+    let codex_info = if let Some(provider) = &codex_provider {
+        let model = provider.settings_config.get("model")
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown");
+        format!("{} → {} ({})", "Codex      ".cyan(), provider.name.green(), model.dimmed())
+    } else {
+        format!("{} → {}", "Codex      ".cyan(), "Not configured".dimmed())
+    };
+
+    println!("{} {:^48} {} {:104} {}",
+        "│".cyan(),
+        format!("Working Directory").white(),
+        "│".cyan(),
+        codex_info,
+        "│".cyan()
+    );
+
+    // 当前供应商信息 - Gemini
+    let gemini_info = if let Some(provider) = &gemini_provider {
+        let model = provider.settings_config.get("model")
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown");
+        format!("{} → {} ({})", "Gemini CLI ".cyan(), provider.name.green(), model.dimmed())
+    } else {
+        format!("{} → {}", "Gemini CLI ".cyan(), "Not configured".dimmed())
+    };
+
+    println!("{} {:^48} {} {:104} {}",
+        "│".cyan(),
+        current_dir.dimmed(),
+        "│".cyan(),
+        gemini_info,
+        "│".cyan()
+    );
+
+    // 底部提示
+    println!("{} {:^48} {} {:104} {}",
+        "│".cyan(),
+        "",
+        "│".cyan(),
+        "",
+        "│".cyan()
+    );
+
+    println!("{} {:^48} {} {:104} {}",
+        "│".cyan(),
+        format!("Type {} for batch operations", "batch".green()),
+        "│".cyan(),
+        format!("Quick tips: {} for switch, {} for add provider", "3".green(), "4".green()),
+        "│".cyan()
+    );
+
+    // 底部边框
+    println!("{}", "└─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘".cyan());
+    println!();
+
+    Ok(())
+}
+
 /// 主菜单
 pub fn main_menu() -> Result<()> {
     let ctx = OutputContext::new(crate::cli::OutputFormat::Table, false);
+
+    // 首次显示欢迎信息
+    clear_screen();
+    if let Err(e) = show_welcome_banner() {
+        eprintln!("Warning: Failed to show welcome banner: {}", e);
+    }
+
+    // 暂停以便用户查看
+    pause();
 
     loop {
         clear_screen();
