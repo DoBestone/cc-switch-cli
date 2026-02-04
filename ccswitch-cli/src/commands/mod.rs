@@ -26,7 +26,7 @@ pub fn execute(cli: Cli) -> Result<()> {
     let command = cli.command.expect("command should be Some when execute is called");
 
     match command {
-        Commands::List { app, detail } => list::list_providers(&ctx, app, detail),
+        Commands::List { app, detail, show_key } => list::list_providers(&ctx, app, detail, show_key),
         Commands::Status { app } => status::show_status(&ctx, app),
         Commands::Use { name, app } => provider::switch(&ctx, &name, app),
         Commands::Add {
@@ -37,7 +37,25 @@ pub fn execute(cli: Cli) -> Result<()> {
             model,
             small_model,
             from_file,
-        } => provider::add(&ctx, &name, app, api_key, base_url, model, small_model, from_file),
+            skip_test,
+        } => provider::add(&ctx, &name, app, api_key, base_url, model, small_model, from_file, skip_test),
+        Commands::Edit {
+            name,
+            app,
+            api_key,
+            base_url,
+            model,
+            small_model,
+            new_name,
+        } => provider::edit(&ctx, &name, app, api_key, base_url, model, small_model, new_name),
+        Commands::Test {
+            name,
+            app,
+            api_key,
+            base_url,
+            model,
+            timeout,
+        } => execute_test(&ctx, name, app, api_key, base_url, model, timeout),
         Commands::Remove { name, app, yes } => provider::remove(&ctx, &name, app, yes),
         Commands::Update { app } => provider::update(&ctx, app),
         Commands::Export { format, out, app } => config::export(&ctx, format, out, app),
@@ -149,6 +167,21 @@ fn execute_speedtest(ctx: &OutputContext, urls: Vec<String>, timeout: u64, use_p
     tokio::runtime::Runtime::new()
         .unwrap()
         .block_on(speedtest::test(ctx, urls, timeout, use_proxy))
+}
+
+/// 执行 API Test 命令
+fn execute_test(
+    ctx: &OutputContext,
+    name: Option<String>,
+    app: crate::cli::AppTypeArg,
+    api_key: Option<String>,
+    base_url: Option<String>,
+    model: Option<String>,
+    timeout: u64,
+) -> Result<()> {
+    tokio::runtime::Runtime::new()
+        .unwrap()
+        .block_on(provider::test_api(ctx, name, app, api_key, base_url, model, timeout))
 }
 
 /// 执行 Env 子命令

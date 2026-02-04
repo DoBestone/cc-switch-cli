@@ -108,7 +108,7 @@ pub enum Commands {
     /// 📋 列出所有供应商配置
     #[command(
         visible_alias = "ls",
-        long_about = "列出所有已配置的供应商。\n\n示例:\n  cc-switch list              列出所有供应商\n  cc-switch list --app claude 只列出 Claude 供应商\n  cc-switch list --detail     显示详细配置信息"
+        long_about = "列出所有已配置的供应商。\n\n示例:\n  cc-switch list              列出所有供应商\n  cc-switch list --app claude 只列出 Claude 供应商\n  cc-switch list --detail     显示详细配置信息\n  cc-switch list --show-key   显示 API Key（脱敏）"
     )]
     List {
         /// 筛选应用类型 (claude/codex/gemini/opencode/all)
@@ -118,6 +118,10 @@ pub enum Commands {
         /// 显示详细配置信息
         #[arg(short, long)]
         detail: bool,
+
+        /// 显示 API Key（脱敏显示）
+        #[arg(long, help = "显示 API Key（部分隐藏）")]
+        show_key: bool,
     },
 
     /// 📊 显示当前使用的供应商状态
@@ -159,7 +163,9 @@ pub enum Commands {
   cc-switch add "代理API" --api-key "sk-xxx" --base-url "https://api.example.com"
   
   # Codex 供应商  
-  cc-switch add "OpenAI" --app codex --api-key "sk-xxx" --model "gpt-4o""#
+  cc-switch add "OpenAI" --app codex --api-key "sk-xxx" --model "gpt-4o"
+  
+注意：添加时会自动测试 API Key 有效性，使用 --skip-test 跳过测试"#
     )]
     Add {
         /// 供应商名称 (方便记忆的名字)
@@ -188,6 +194,88 @@ pub enum Commands {
         /// 从文件导入完整配置
         #[arg(long, value_name = "FILE", help = "从 JSON 文件导入")]
         from_file: Option<String>,
+
+        /// 跳过 API 测试
+        #[arg(long, help = "跳过添加前的 API 测试")]
+        skip_test: bool,
+    },
+
+    /// ✏️ 编辑供应商
+    #[command(
+        long_about = r#"编辑已有的供应商配置。
+
+示例:
+  # 修改 API Key
+  cc-switch edit "云雾API" --api-key "sk-new-xxx"
+  
+  # 修改 Base URL
+  cc-switch edit "云雾API" --base-url "https://new-api.example.com"
+  
+  # 修改多个字段
+  cc-switch edit "云雾API" --api-key "sk-xxx" --model "claude-sonnet-4-20250514""#
+    )]
+    Edit {
+        /// 供应商名称
+        name: String,
+
+        /// 应用类型
+        #[arg(short, long, value_enum, default_value = "claude")]
+        app: AppTypeArg,
+
+        /// 新 API Key
+        #[arg(long, help = "新的 API Key")]
+        api_key: Option<String>,
+
+        /// 新 Base URL
+        #[arg(long, help = "新的 Base URL")]
+        base_url: Option<String>,
+
+        /// 新主模型
+        #[arg(long, short = 'm', help = "新的主模型")]
+        model: Option<String>,
+
+        /// 新小模型
+        #[arg(long, help = "新的小模型")]
+        small_model: Option<String>,
+
+        /// 新名称
+        #[arg(long, help = "新的供应商名称")]
+        new_name: Option<String>,
+    },
+
+    /// 🧪 测试供应商 API Key
+    #[command(
+        long_about = r#"测试供应商的 API Key 是否有效。
+
+示例:
+  cc-switch test "云雾API"                   测试指定供应商
+  cc-switch test "云雾API" --app claude      测试 Claude 供应商
+  cc-switch test --api-key "sk-xxx"          直接测试 API Key
+  cc-switch test --api-key "sk-xxx" --base-url "https://api.example.com""#
+    )]
+    Test {
+        /// 供应商名称（可选，与 --api-key 二选一）
+        name: Option<String>,
+
+        /// 应用类型
+        #[arg(short, long, value_enum, default_value = "claude")]
+        app: AppTypeArg,
+
+        /// 直接测试 API Key
+        #[arg(long, help = "要测试的 API Key")]
+        api_key: Option<String>,
+
+        /// Base URL（配合 --api-key 使用）
+        #[arg(long, help = "Base URL")]
+        base_url: Option<String>,
+
+        /// 测试模型
+        #[arg(long, help = "测试使用的模型")]
+        model: Option<String>,
+
+        /// 超时时间（秒）
+        #[arg(long, default_value = "30")]
+        timeout: u64,
     },
 
     /// ❌ 删除供应商

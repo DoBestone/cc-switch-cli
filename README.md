@@ -13,6 +13,7 @@
 - 🎮 **交互式菜单** - 新手友好的图形化菜单界面
 - 🔄 **供应商切换** - 快速切换不同的 API 供应商配置
 - 📋 **多应用支持** - Claude Code、Codex CLI、Gemini CLI、OpenCode
+- 🧪 **API 测试** - 验证 API Key 有效性
 - 📦 **MCP 服务器管理** - 管理 Model Context Protocol 服务器
 - 📝 **Prompts 管理** - 管理系统提示词
 - 🧩 **Skills 扩展** - 从 GitHub 安装和管理 Skills
@@ -24,7 +25,33 @@
 
 ## 安装
 
-### 从源码编译
+### 🚀 一键安装（推荐）
+
+```bash
+# 使用 curl
+curl -fsSL https://raw.githubusercontent.com/DoBestone/cc-switch-cli/main/install.sh | bash
+
+# 或使用 wget
+wget -qO- https://raw.githubusercontent.com/DoBestone/cc-switch-cli/main/install.sh | bash
+```
+
+安装脚本会自动：
+1. 检测您的操作系统和架构
+2. 下载预编译二进制（如有）
+3. 如果没有预编译版本，自动安装 Rust 并从源码编译
+4. 将 `cc-switch` 安装到 `/usr/local/bin`
+
+### 📦 使用 Cargo 安装
+
+```bash
+# 直接从 crates.io 安装（需要先发布）
+cargo install cc-switch
+
+# 或从 Git 仓库安装
+cargo install --git https://github.com/DoBestone/cc-switch-cli.git
+```
+
+### 🔧 从源码编译
 
 ```bash
 # 克隆仓库
@@ -54,7 +81,7 @@ cc-switch
 ```
 
 菜单功能包括：
-- **供应商管理**：列出、查看状态、切换、添加、删除
+- **供应商管理**：列出、查看状态、切换、添加、编辑、测试、删除
 - **扩展功能**：MCP 服务器、Prompts、Skills 管理
 - **工具**：代理设置、端点测速、环境检测、查看配置
 
@@ -66,6 +93,9 @@ cc-switch --help
 
 # 列出所有供应商
 cc-switch list
+
+# 列出供应商并显示 API Key（脱敏）
+cc-switch list --show-key
 
 # 列出 Claude 供应商
 cc-switch list --app claude
@@ -83,8 +113,21 @@ cc-switch config path
 ### 供应商管理
 
 ```bash
-# 添加 Claude 供应商
+# 添加 Claude 供应商（自动测试 API Key）
 cc-switch add my-provider --app claude --api-key "sk-xxx" --base-url "https://api.example.com"
+
+# 添加时跳过 API 测试
+cc-switch add my-provider --app claude --api-key "sk-xxx" --skip-test
+
+# 编辑供应商
+cc-switch edit my-provider --app claude --api-key "sk-new-xxx"
+cc-switch edit my-provider --app claude --base-url "https://new-api.example.com"
+
+# 测试供应商 API Key
+cc-switch test my-provider --app claude
+
+# 直接测试 API Key（不需要先添加）
+cc-switch test --api-key "sk-xxx" --app claude
 
 # 从文件导入
 cc-switch add my-provider --app claude --from-file config.json

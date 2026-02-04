@@ -124,18 +124,20 @@ pub fn main_menu() -> Result<()> {
     println!("  {} {} - 查看当前使用的供应商", "2.".green(), "查看状态".white());
     println!("  {} {} - 切换到其他供应商", "3.".green(), "切换供应商".white());
     println!("  {} {} - 添加新的供应商配置", "4.".green(), "添加供应商".white());
-    println!("  {} {} - 删除供应商配置", "5.".green(), "删除供应商".white());
+    println!("  {} {} - 编辑供应商配置", "5.".green(), "编辑供应商".white());
+    println!("  {} {} - 测试供应商 API", "6.".green(), "测试供应商".white());
+    println!("  {} {} - 删除供应商配置", "7.".green(), "删除供应商".white());
     println!();
     println!("{}", "── 扩展功能 ──".dimmed());
-    println!("  {} {} - 管理 MCP 服务器", "6.".green(), "MCP 服务器".white());
-    println!("  {} {} - 管理系统提示词", "7.".green(), "Prompts".white());
-    println!("  {} {} - 管理 Skills 扩展", "8.".green(), "Skills".white());
+    println!("  {} {} - 管理 MCP 服务器", "8.".green(), "MCP 服务器".white());
+    println!("  {} {} - 管理系统提示词", "9.".green(), "Prompts".white());
+    println!(" {} {} - 管理 Skills 扩展", "10.".green(), "Skills".white());
     println!();
     println!("{}", "── 工具 ──".dimmed());
-    println!("  {} {} - 设置全局代理", "9.".green(), "代理设置".white());
-    println!(" {} {} - 测试 API 端点延迟", "10.".green(), "端点测速".white());
-    println!(" {} {} - 检测环境变量冲突", "11.".green(), "环境检测".white());
-    println!(" {} {} - 查看配置文件路径", "12.".green(), "查看配置".white());
+    println!(" {} {} - 设置全局代理", "11.".green(), "代理设置".white());
+    println!(" {} {} - 测试 API 端点延迟", "12.".green(), "端点测速".white());
+    println!(" {} {} - 检测环境变量冲突", "13.".green(), "环境检测".white());
+    println!(" {} {} - 查看配置文件路径", "14.".green(), "查看配置".white());
     println!();
     println!("  {} {} - 退出程序", "0.".green(), "退出".white());
     println!();
@@ -145,7 +147,7 @@ pub fn main_menu() -> Result<()> {
 
         match choice.as_str() {
             "1" | "list" | "ls" => {
-                commands::list::list_providers(&ctx, AppTypeArg::All, false)?;
+                commands::list::list_providers(&ctx, AppTypeArg::All, false, true)?;
                 return Ok(());
             }
             "2" | "status" => {
@@ -158,28 +160,34 @@ pub fn main_menu() -> Result<()> {
             "4" | "add" => {
                 return interactive_add(&ctx);
             }
-            "5" | "remove" | "rm" => {
+            "5" | "edit" => {
+                return interactive_edit(&ctx);
+            }
+            "6" | "test" => {
+                return interactive_test(&ctx);
+            }
+            "7" | "remove" | "rm" => {
                 return interactive_remove(&ctx);
             }
-            "6" | "mcp" => {
+            "8" | "mcp" => {
                 return interactive_mcp(&ctx);
             }
-            "7" | "prompt" | "prompts" => {
+            "9" | "prompt" | "prompts" => {
                 return interactive_prompt(&ctx);
             }
-            "8" | "skill" | "skills" => {
+            "10" | "skill" | "skills" => {
                 return interactive_skill(&ctx);
             }
-            "9" | "proxy" => {
+            "11" | "proxy" => {
                 return interactive_proxy(&ctx);
             }
-            "10" | "speedtest" | "speed" => {
+            "12" | "speedtest" | "speed" => {
                 return interactive_speedtest(&ctx);
             }
-            "11" | "env" => {
+            "13" | "env" => {
                 return interactive_env(&ctx);
             }
-            "12" | "config" => {
+            "14" | "config" => {
                 commands::config::show_paths(&ctx, AppTypeArg::All)?;
                 return Ok(());
             }
@@ -189,10 +197,10 @@ pub fn main_menu() -> Result<()> {
             }
             "" => {
                 // 空输入显示提示
-                println!("{}", "请输入 1-12 选择操作，或输入 0 退出".dimmed());
+                println!("{}", "请输入 1-14 选择操作，或输入 0 退出".dimmed());
             }
             _ => {
-                println!("{}", "无效选择，请输入 0-12".yellow());
+                println!("{}", "无效选择，请输入 0-14".yellow());
             }
         }
     }
@@ -204,9 +212,16 @@ fn interactive_switch(ctx: &OutputContext) -> Result<()> {
     
     let app_type = select_app_type()?;
     let state = AppState::init()?;
-    let name = select_provider(&state, app_type)?;
+    let name = select_provider(&state, app_type.clone())?;
     
-    commands::provider::switch(ctx, &name, AppTypeArg::Claude)?;
+    let app_arg = match app_type {
+        AppType::Claude => AppTypeArg::Claude,
+        AppType::Codex => AppTypeArg::Codex,
+        AppType::Gemini => AppTypeArg::Gemini,
+        AppType::OpenCode => AppTypeArg::Opencode,
+    };
+    
+    commands::provider::switch(ctx, &name, app_arg)?;
     Ok(())
 }
 
@@ -235,7 +250,7 @@ fn interactive_add(ctx: &OutputContext) -> Result<()> {
             
             commands::provider::add(
                 ctx, &name, app_arg,
-                Some(api_key), base_url, model, small_model, None
+                Some(api_key), base_url, model, small_model, None, false
             )?;
         }
         AppType::Codex => {
@@ -246,7 +261,7 @@ fn interactive_add(ctx: &OutputContext) -> Result<()> {
             
             commands::provider::add(
                 ctx, &name, app_arg,
-                Some(api_key), base_url, model, None, None
+                Some(api_key), base_url, model, None, None, false
             )?;
         }
         AppType::Gemini => {
@@ -257,7 +272,7 @@ fn interactive_add(ctx: &OutputContext) -> Result<()> {
             
             commands::provider::add(
                 ctx, &name, app_arg,
-                Some(api_key), base_url, model, None, None
+                Some(api_key), base_url, model, None, None, false
             )?;
         }
         AppType::OpenCode => {
@@ -275,7 +290,7 @@ fn interactive_remove(ctx: &OutputContext) -> Result<()> {
 
     let app_type = select_app_type()?;
     let state = AppState::init()?;
-    let name = select_provider(&state, app_type)?;
+    let name = select_provider(&state, app_type.clone())?;
 
     let app_arg = match app_type {
         AppType::Claude => AppTypeArg::Claude,
@@ -286,6 +301,96 @@ fn interactive_remove(ctx: &OutputContext) -> Result<()> {
 
     commands::provider::remove(ctx, &name, app_arg, false)?;
     Ok(())
+}
+
+/// 交互式编辑供应商
+fn interactive_edit(ctx: &OutputContext) -> Result<()> {
+    println!("\n{}", "═══ 编辑供应商 ═══".cyan().bold());
+
+    let app_type = select_app_type()?;
+    let state = AppState::init()?;
+    let name = select_provider(&state, app_type.clone())?;
+
+    let app_arg = match app_type {
+        AppType::Claude => AppTypeArg::Claude,
+        AppType::Codex => AppTypeArg::Codex,
+        AppType::Gemini => AppTypeArg::Gemini,
+        AppType::OpenCode => AppTypeArg::Opencode,
+    };
+
+    println!("\n{}", "修改配置 (留空保持不变):".white().bold());
+
+    let new_name = read_optional("新名称", None)?;
+    let api_key = read_optional("新 API Key", None)?;
+    let base_url = read_optional("新 Base URL", None)?;
+    let model = read_optional("新模型", None)?;
+    let small_model = if matches!(app_type, AppType::Claude) {
+        read_optional("新小模型", None)?
+    } else {
+        None
+    };
+
+    // 检查是否有任何修改
+    if new_name.is_none() && api_key.is_none() && base_url.is_none() && model.is_none() && small_model.is_none() {
+        println!("{}", "没有进行任何修改".yellow());
+        return Ok(());
+    }
+
+    commands::provider::edit(ctx, &name, app_arg, api_key, base_url, model, small_model, new_name)?;
+    Ok(())
+}
+
+/// 交互式测试供应商
+fn interactive_test(ctx: &OutputContext) -> Result<()> {
+    println!("\n{}", "═══ 测试供应商 API ═══".cyan().bold());
+    println!();
+    println!("  {} {} - 测试已配置的供应商", "1.".green(), "选择供应商".white());
+    println!("  {} {} - 直接输入 API Key 测试", "2.".green(), "手动测试".white());
+    println!("  {} {} - 返回主菜单", "0.".green(), "返回".white());
+    println!();
+
+    loop {
+        let choice = read_input("请选择: ")?;
+        match choice.as_str() {
+            "1" => {
+                let app_type = select_app_type()?;
+                let state = AppState::init()?;
+                let name = select_provider(&state, app_type.clone())?;
+
+                let app_arg = match app_type {
+                    AppType::Claude => AppTypeArg::Claude,
+                    AppType::Codex => AppTypeArg::Codex,
+                    AppType::Gemini => AppTypeArg::Gemini,
+                    AppType::OpenCode => AppTypeArg::Opencode,
+                };
+
+                tokio::runtime::Runtime::new()
+                    .unwrap()
+                    .block_on(commands::provider::test_api(ctx, Some(name), app_arg, None, None, None, 30))?;
+                return Ok(());
+            }
+            "2" => {
+                let app_type = select_app_type()?;
+                let api_key = read_required("API Key")?;
+                let base_url = read_optional("Base URL", None)?;
+                let model = read_optional("测试模型", None)?;
+
+                let app_arg = match app_type {
+                    AppType::Claude => AppTypeArg::Claude,
+                    AppType::Codex => AppTypeArg::Codex,
+                    AppType::Gemini => AppTypeArg::Gemini,
+                    AppType::OpenCode => AppTypeArg::Opencode,
+                };
+
+                tokio::runtime::Runtime::new()
+                    .unwrap()
+                    .block_on(commands::provider::test_api(ctx, None, app_arg, Some(api_key), base_url, model, 30))?;
+                return Ok(());
+            }
+            "0" | "q" | "back" => return Ok(()),
+            _ => println!("{}", "无效选择".yellow()),
+        }
+    }
 }
 
 /// 交互式 MCP 管理

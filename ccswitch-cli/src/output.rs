@@ -37,6 +37,8 @@ pub struct ProviderRow {
     pub status: String,
     #[tabled(rename = "Base URL")]
     pub base_url: String,
+    #[tabled(rename = "API Key")]
+    pub api_key: String,
 }
 
 /// 状态行
@@ -182,4 +184,27 @@ pub fn truncate(s: &str, max_len: usize) -> String {
     } else {
         format!("{}...", &s[..max_len - 3])
     }
+}
+
+/// 脱敏 API Key（显示前缀和后缀）
+pub fn mask_api_key(key: &str) -> String {
+    if key.is_empty() {
+        return "-".to_string();
+    }
+
+    let len = key.len();
+    if len <= 8 {
+        // 太短，全部隐藏
+        return format!("{}***", &key[..2.min(len)]);
+    }
+
+    // 显示前8个字符和后4个字符
+    let prefix_len = 8.min(len);
+    let suffix_len = 4.min(len - prefix_len);
+
+    format!(
+        "{}...{}",
+        &key[..prefix_len],
+        &key[len - suffix_len..]
+    )
 }
