@@ -10,19 +10,20 @@
 ## 特性
 
 - 🖥️ **纯 CLI** - 无 GUI 依赖，可在 SSH 会话中使用
-- 🎮 **交互式菜单** - 新手友好的图形化菜单界面
+- 🎮 **交互式菜单** - 新手友好的图形化菜单界面（支持高级 TUI 模式）
 - 🔄 **供应商切换** - 快速切换不同的 API 供应商配置
 - 📋 **多应用支持** - Claude Code、Codex CLI、Gemini CLI、OpenCode
-- 🧪 **API 测试** - 验证 API Key 有效性
+- 🧪 **API 测试** - 验证 API Key 有效性和连接延迟
 - 📦 **MCP 服务器管理** - 管理 Model Context Protocol 服务器
 - 📝 **Prompts 管理** - 管理系统提示词
 - 🧩 **Skills 扩展** - 从 GitHub 安装和管理 Skills
 - 🌐 **代理支持** - 全局代理设置和自动扫描
 - ⚡ **端点测速** - 测试 API 端点延迟
 - 🔍 **环境检测** - 检测环境变量冲突
-- � **自动更新** - 检测新版本并一键更新
-- �💾 **单一可执行文件** - 编译后仅需一个二进制文件
-- 🔧 **可扩展** - 代码结构清晰，便于后续增加 TUI 支持
+- 🔄 **批量操作** - 批量切换、测试、导出、导入、同步和编辑供应商
+- 🚀 **自动更新** - 检测新版本并一键更新（支持预编译二进制）
+- 💾 **单一可执行文件** - 编译后仅需一个二进制文件
+- 🎨 **高级 TUI** - ratatui 构建的现代化终端界面（实验性）
 
 ## 安装
 
@@ -310,6 +311,105 @@ cc-switch self-update --force
 cc-switch upgrade --check
 ```
 
+### 批量操作
+
+批量操作功能允许您高效地管理多个供应商和应用配置。
+
+#### 批量切换
+
+将所有应用切换到同一个供应商：
+
+```bash
+# 批量切换所有应用到指定供应商
+cc-switch batch switch "云雾API"
+```
+
+#### 批量测试
+
+并发测试所有供应商的 API 连接性和延迟：
+
+```bash
+# 测试所有供应商
+cc-switch batch test
+
+# 只测试 Claude 供应商
+cc-switch batch test --app claude
+
+# 显示详细错误信息
+cc-switch batch test --verbose
+
+# 设置超时时间
+cc-switch batch test --timeout 60
+```
+
+#### 批量导出/导入
+
+导出和导入配置，用于备份或迁移：
+
+```bash
+# 导出所有供应商配置到 YAML 文件
+cc-switch batch export backup.yaml
+
+# 只导出 Claude 供应商
+cc-switch batch export claude.yaml --app claude
+
+# 导入配置
+cc-switch batch import backup.yaml
+
+# 导入并覆盖已存在的配置
+cc-switch batch import backup.yaml --overwrite
+```
+
+#### 批量删除
+
+删除多个供应商：
+
+```bash
+# 批量删除多个供应商（会提示确认）
+cc-switch batch remove "供应商1" "供应商2" "供应商3"
+
+# 跳过确认直接删除
+cc-switch batch remove "供应商1" "供应商2" -y
+
+# 删除所有应用中的指定供应商
+cc-switch batch remove "临时API" --app all
+```
+
+#### 批量同步
+
+将一个应用的配置同步到其他应用：
+
+```bash
+# 将 Claude 的供应商配置同步到 Codex 和 Gemini
+cc-switch batch sync --from claude --to codex gemini
+
+# 同步到所有其他应用
+cc-switch batch sync --from claude --to all
+
+# 覆盖已存在的配置
+cc-switch batch sync --from claude --to all --overwrite
+```
+
+#### 批量编辑
+
+批量修改供应商的配置字段：
+
+```bash
+# 修改所有供应商的 base-url
+cc-switch batch edit base-url "https://api.example.com" --app all
+
+# 只修改名称包含 "OpenAI" 的供应商的模型
+cc-switch batch edit model "gpt-4o" --pattern "OpenAI"
+
+# 修改小模型配置
+cc-switch batch edit small-model "claude-haiku-4-20250514" --app claude
+```
+
+支持的字段：
+- `base-url` (或 `base_url`, `baseUrl`)
+- `model`
+- `small-model` (或 `small_model`, `smallModel`)
+
 ## 配置文件位置
 
 ### Linux 服务器推荐
@@ -376,25 +476,29 @@ cc-switch-cli/
 
 ## 功能对比
 
-| 功能 | 命令行 | 交互式菜单 |
-|------|--------|------------|
-| 供应商管理 | ✅ | ✅ |
-| MCP 服务器 | ✅ | ✅ |
-| Prompts | ✅ | ✅ |
-| Skills | ✅ | ✅ |
-| 代理设置 | ✅ | ✅ |
-| 端点测速 | ✅ | ✅ |
-| 环境检测 | ✅ | ✅ |
-| 批量操作 | ✅ | ❌ |
+| 功能 | 命令行 | 交互式菜单 | 批量操作 |
+|------|--------|------------|----------|
+| 供应商管理 | ✅ | ✅ | ✅ |
+| MCP 服务器 | ✅ | ✅ | ❌ |
+| Prompts | ✅ | ✅ | ❌ |
+| Skills | ✅ | ✅ | ❌ |
+| 代理设置 | ✅ | ✅ | ❌ |
+| 端点测速 | ✅ | ✅ | ❌ |
+| 环境检测 | ✅ | ✅ | ❌ |
+| 批量切换 | ✅ | ❌ | ✅ |
+| 批量测试 | ✅ | ❌ | ✅ |
+| 批量导出/导入 | ✅ | ❌ | ✅ |
+| 批量同步 | ✅ | ❌ | ✅ |
+| 批量编辑 | ✅ | ❌ | ✅ |
 
 ## 后续计划
 
-- [ ] TUI 支持 (使用 ratatui)
+- [x] ✅ TUI 支持 (使用 ratatui) - 高级 TUI 模式已实现
 - [ ] 订阅同步功能
-- [ ] 配置导入导出
+- [x] ✅ 配置导入导出 - 批量导出/导入已实现
 - [x] ✅ MCP 服务器管理
 - [x] ✅ 交互式菜单
-- [ ] 批量操作增强
+- [x] ✅ 批量操作增强 - 完整的批量操作系统已实现
 
 ## 许可证
 

@@ -442,8 +442,132 @@ pub enum Commands {
         force: bool,
     },
 
+    /// 🔄 批量操作命令
+    #[command(
+        long_about = "批量操作多个供应商或应用。\n\n支持批量切换、测试、导出、导入、同步等操作。"
+    )]
+    Batch {
+        #[command(subcommand)]
+        action: BatchAction
+    },
+
     /// ℹ️ 显示版本信息
     Version,
+}
+
+/// 批量操作子命令
+#[derive(Subcommand, Debug)]
+pub enum BatchAction {
+    /// 🔄 批量切换所有应用到指定供应商
+    #[command(
+        visible_alias = "use",
+        long_about = "将所有应用（Claude, Codex, Gemini）切换到同一个供应商。\n\n示例:\n  cc-switch batch switch 云雾API"
+    )]
+    Switch {
+        /// 供应商名称
+        name: String,
+    },
+
+    /// 🧪 批量测试所有供应商 API
+    #[command(
+        long_about = "并发测试所有或指定应用的供应商 API。\n\n示例:\n  cc-switch batch test              测试所有供应商\n  cc-switch batch test --app claude 只测试 Claude 供应商\n  cc-switch batch test --verbose    显示详细错误信息"
+    )]
+    Test {
+        /// 筛选应用类型
+        #[arg(short, long, value_enum, default_value = "all")]
+        app: AppTypeArg,
+
+        /// 超时时间（秒）
+        #[arg(short, long, default_value = "30")]
+        timeout: u64,
+
+        /// 显示详细错误信息
+        #[arg(short, long)]
+        verbose: bool,
+    },
+
+    /// 📤 批量导出配置到文件
+    #[command(
+        long_about = "导出所有供应商配置到 YAML 文件。\n\n示例:\n  cc-switch batch export backup.yaml              导出所有应用\n  cc-switch batch export claude.yaml --app claude 只导出 Claude"
+    )]
+    Export {
+        /// 输出文件路径
+        output: String,
+
+        /// 筛选应用类型
+        #[arg(short, long, value_enum, default_value = "all")]
+        app: AppTypeArg,
+    },
+
+    /// 📥 批量导入配置从文件
+    #[command(
+        long_about = "从 YAML 文件导入供应商配置。\n\n示例:\n  cc-switch batch import backup.yaml            导入配置\n  cc-switch batch import backup.yaml --overwrite 覆盖已存在的配置"
+    )]
+    Import {
+        /// 输入文件路径
+        input: String,
+
+        /// 覆盖已存在的配置
+        #[arg(long)]
+        overwrite: bool,
+    },
+
+    /// ❌ 批量删除供应商
+    #[command(
+        visible_alias = "rm",
+        long_about = "批量删除多个供应商。\n\n示例:\n  cc-switch batch remove 供应商1 供应商2 供应商3\n  cc-switch batch remove -y 供应商1         跳过确认"
+    )]
+    Remove {
+        /// 要删除的供应商名称列表
+        #[arg(required = true, num_args = 1..)]
+        names: Vec<String>,
+
+        /// 筛选应用类型
+        #[arg(short, long, value_enum, default_value = "all")]
+        app: AppTypeArg,
+
+        /// 跳过确认直接删除
+        #[arg(short = 'y', long)]
+        force: bool,
+    },
+
+    /// 🔄 批量同步配置（从一个应用复制到其他应用）
+    #[command(
+        long_about = "将一个应用的所有供应商配置同步到其他应用。\n\n示例:\n  cc-switch batch sync --from claude --to codex,gemini\n  cc-switch batch sync --from claude --to all --overwrite"
+    )]
+    Sync {
+        /// 源应用类型
+        #[arg(long, value_enum, required = true)]
+        from: AppTypeArg,
+
+        /// 目标应用类型（逗号分隔或 'all'）
+        #[arg(long, value_delimiter = ',', num_args = 1.., required = true)]
+        to: Vec<AppTypeArg>,
+
+        /// 覆盖已存在的配置
+        #[arg(long)]
+        overwrite: bool,
+    },
+
+    /// ✏️ 批量编辑配置字段
+    #[command(
+        long_about = "批量修改供应商的指定字段。\n\n示例:\n  cc-switch batch edit base-url https://api.example.com --app all\n  cc-switch batch edit model gpt-4 --pattern OpenAI"
+    )]
+    Edit {
+        /// 要修改的字段名 (base-url, model, small-model)
+        field: String,
+
+        /// 新值
+        value: String,
+
+        /// 筛选应用类型
+        #[arg(short, long, value_enum, default_value = "all")]
+        app: AppTypeArg,
+
+        /// 只修改名称匹配此模式的供应商
+        #[arg(long)]
+        pattern: Option<String>,
+    },
 }
 
 /// 配置操作子命令

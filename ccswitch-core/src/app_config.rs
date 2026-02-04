@@ -7,7 +7,7 @@ use std::fmt;
 use std::str::FromStr;
 
 /// 支持的应用类型
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum AppType {
     /// Claude Code CLI

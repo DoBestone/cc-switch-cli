@@ -1,6 +1,6 @@
 [package]
 name = "ccswitch-cli"
-version = "1.0.2"
+version = "1.1.0"
 edition = "2021"
 authors = ["CC-Switch Contributors"]
 description = "CLI tool for managing Claude Code, Codex, and Gemini CLI configurations"
@@ -32,6 +32,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
 chrono = "0.4"
+indexmap = { version = "2", features = ["serde"] }
 
 # HTTP client for API testing
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }

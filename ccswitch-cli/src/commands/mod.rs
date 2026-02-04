@@ -2,6 +2,7 @@
 //!
 //! 实现各个 CLI 子命令的具体逻辑。
 
+pub mod batch;
 pub mod config;
 pub mod env;
 pub mod list;
@@ -16,7 +17,7 @@ pub mod update;
 
 use anyhow::Result;
 
-use crate::cli::{Cli, Commands, EnvAction, McpAction, PromptAction, ProxyAction, SkillAction, SelfUpdateAction};
+use crate::cli::{Cli, Commands, BatchAction, EnvAction, McpAction, PromptAction, ProxyAction, SkillAction, SelfUpdateAction};
 use crate::output::OutputContext;
 
 /// 执行 CLI 命令
@@ -73,9 +74,51 @@ pub fn execute(cli: Cli) -> Result<()> {
         Commands::Env { action } => execute_env(&ctx, action),
         Commands::Skill { action } => execute_skill(&ctx, action),
         Commands::SelfUpdate { action, check, force } => execute_self_update(&ctx, action, check, force),
+        Commands::Batch { action } => execute_batch(&ctx, action),
         Commands::Version => {
             println!("cc-switch {}", ccswitch_core::VERSION);
             Ok(())
+        }
+    }
+}
+
+/// 执行批量操作子命令
+fn execute_batch(ctx: &OutputContext, action: BatchAction) -> Result<()> {
+    match action {
+        BatchAction::Switch { name } => batch::batch_switch(ctx, &name),
+        BatchAction::Test { app, timeout, verbose } => {
+            tokio::runtime::Runtime::new()
+                .unwrap()
+                .block_on(batch::batch_test(ctx, app, timeout, verbose))
+        }
+        BatchAction::Export { output, app } => batch::batch_export(ctx, &output, app),
+        BatchAction::Import { input, overwrite } => batch::batch_import(ctx, &input, overwrite),
+        BatchAction::Remove { names, app, force } => batch::batch_remove(ctx, &names, app, force),
+        BatchAction::Sync { from, to, overwrite } => {
+            // 处理 from 和 to
+            let from_app = from.to_app_types().into_iter().next()
+                .ok_or_else(|| anyhow::anyhow!("源应用类型无效"))?;
+
+            let mut target_apps = Vec::new();
+            for t in to {
+                target_apps.extend(t.to_app_types());
+            }
+
+            // 去重
+            target_apps.sort();
+            target_apps.dedup();
+
+            // 移除源应用（不能同步到自己）
+            target_apps.retain(|app| *app != from_app);
+
+            if target_apps.is_empty() {
+                anyhow::bail!("没有有效的目标应用");
+            }
+
+            batch::batch_sync(ctx, from_app, target_apps, overwrite)
+        }
+        BatchAction::Edit { field, value, app, pattern } => {
+            batch::batch_edit(ctx, app, &field, &value, pattern.as_deref())
         }
     }
 }
