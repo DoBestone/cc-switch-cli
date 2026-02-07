@@ -183,6 +183,192 @@ impl EnvCheckerService {
             format!("{}...{}", &value[..4], &value[value.len() - 4..])
         }
     }
+
+    /// 备份 Shell 配置文件
+    pub fn backup_shell_configs() -> Result<PathBuf, AppError> {
+        let home = get_home_dir();
+        let backup_dir = home.join(".cc-switch-backups");
+
+        // 创建备份目录
+        fs::create_dir_all(&backup_dir).map_err(|e| {
+            AppError::Message(format!("无法创建备份目录: {}", e))
+        })?;
+
+        // 生成时间戳
+        let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S").to_string();
+        let backup_subdir = backup_dir.join(format!("env_backup_{}", timestamp));
+        fs::create_dir_all(&backup_subdir).map_err(|e| {
+            AppError::Message(format!("无法创建备份子目录: {}", e))
+        })?;
+
+        // 备份所有 Shell 配置文件
+        for config_file in get_shell_config_files() {
+            if config_file.exists() {
+                let file_name = config_file.file_name()
+                    .ok_or_else(|| AppError::Config("无效的文件名".to_string()))?;
+                let backup_file = backup_subdir.join(file_name);
+
+                fs::copy(&config_file, &backup_file).map_err(|e| {
+                    AppError::Message(format!("无法备份文件 {:?}: {}", config_file, e))
+                })?;
+            }
+        }
+
+        Ok(backup_subdir)
+    }
+
+    /// 从 Shell 配置文件中移除指定的环境变量
+    pub fn remove_env_from_shell_configs(app: AppType) -> Result<Vec<String>, AppError> {
+        let keywords = get_app_env_keywords(&app);
+        let mut modified_files = Vec::new();
+
+        for config_file in get_shell_config_files() {
+            if !config_file.exists() {
+                continue;
+            }
+
+            let content = fs::read_to_string(&config_file).map_err(|e| {
+                AppError::Message(format!("无法读取文件 {:?}: {}", config_file, e))
+            })?;
+
+            let mut modified = false;
+            let mut new_lines = Vec::new();
+            let mut skip_next = false;
+
+            for line in content.lines() {
+                if skip_next {
+                    skip_next = false;
+                    continue;
+                }
+
+                let mut should_skip = false;
+                let trimmed: &str = line.trim();
+
+                // 检查是否是要移除的环境变量
+                for (key, _) in &keywords {
+                    if trimmed.starts_with(&format!("export {}=", key))
+                        || trimmed.starts_with(&format!("export {} =", key))
+                        || (trimmed.starts_with(&format!("{}=", key)) && !trimmed.contains("PATH"))
+                    {
+                        should_skip = true;
+                        modified = true;
+                        break;
+                    }
+                }
+
+                if !should_skip {
+                    new_lines.push(line);
+                }
+            }
+
+            if modified {
+                let new_content = new_lines.join("\n") + "\n";
+                fs::write(&config_file, new_content).map_err(|e| {
+                    AppError::Message(format!("无法写入文件 {:?}: {}", config_file, e))
+                })?;
+
+                modified_files.push(
+                    config_file.file_name()
+                        .and_then(|s| s.to_str())
+                        .unwrap_or("unknown")
+                        .to_string()
+                );
+            }
+        }
+
+        Ok(modified_files)
+    }
+
+    /// 列出所有备份
+    pub fn list_backups() -> Result<Vec<PathBuf>, AppError> {
+        let home = get_home_dir();
+        let backup_dir = home.join(".cc-switch-backups");
+
+        if !backup_dir.exists() {
+            return Ok(Vec::new());
+        }
+
+        let mut backups: Vec<PathBuf> = Vec::new();
+        for entry in fs::read_dir(&backup_dir).map_err(|e| {
+            AppError::Message(format!("无法读取备份目录: {}", e))
+        })? {
+            let entry = entry.map_err(|e| {
+                AppError::Message(format!("无法读取目录项: {}", e))
+            })?;
+            let path: PathBuf = entry.path();
+            if path.is_dir() {
+                backups.push(path);
+            }
+        }
+
+        // 按时间倒序排序
+        backups.sort_by(|a: &PathBuf, b: &PathBuf| b.cmp(a));
+        Ok(backups)
+    }
+
+    /// 恢复备份
+    pub fn restore_backup(backup_path: &PathBuf) -> Result<Vec<String>, AppError> {
+        if !backup_path.exists() {
+            return Err(AppError::Config("备份目录不存在".to_string()));
+        }
+
+        let mut restored_files = Vec::new();
+        let home = get_home_dir();
+
+        for entry in fs::read_dir(backup_path).map_err(|e| {
+            AppError::Message(format!("无法读取备份目录: {}", e))
+        })? {
+            let entry = entry.map_err(|e| {
+                AppError::Message(format!("无法读取目录项: {}", e))
+            })?;
+
+            let backup_file: PathBuf = entry.path();
+            if backup_file.is_file() {
+                let file_name = backup_file.file_name()
+                    .ok_or_else(|| AppError::Config("无效的文件名".to_string()))?;
+
+                // 确定恢复目标路径
+                let target_path = if file_name.to_str().unwrap_or("").contains("fish") {
+                    home.join(".config/fish").join(file_name)
+                } else {
+                    home.join(file_name)
+                };
+
+                // 确保目标目录存在
+                if let Some(parent) = target_path.parent() {
+                    fs::create_dir_all(parent).map_err(|e| {
+                        AppError::Message(format!("无法创建目录: {}", e))
+                    })?;
+                }
+
+                fs::copy(&backup_file, &target_path).map_err(|e| {
+                    AppError::Message(format!("无法恢复文件 {:?}: {}", backup_file, e))
+                })?;
+
+                restored_files.push(file_name.to_string_lossy().to_string());
+            }
+        }
+
+        Ok(restored_files)
+    }
+
+    /// 清除当前 Shell 会话中的环境变量（生成脚本）
+    pub fn generate_unset_script(app: AppType) -> String {
+        let keywords = get_app_env_keywords(&app);
+        let mut script = String::new();
+
+        script.push_str("#!/bin/bash\n");
+        script.push_str("# CC-Switch 环境变量清除脚本\n");
+        script.push_str(&format!("# 应用: {}\n\n", app.display_name()));
+
+        for (key, desc) in keywords {
+            script.push_str(&format!("# {}\n", desc));
+            script.push_str(&format!("unset {}\n", key));
+        }
+
+        script.push_str("\necho \"环境变量已清除，请重启终端以确保生效\"\n");
+        script
+    }
 }
 
 #[cfg(test)]
