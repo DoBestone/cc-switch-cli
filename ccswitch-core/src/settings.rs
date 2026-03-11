@@ -43,6 +43,7 @@ impl VisibleApps {
             AppType::Codex => self.codex,
             AppType::Gemini => self.gemini,
             AppType::OpenCode => self.opencode,
+            AppType::OpenClaw => true, // OpenClaw 默认可见
         }
     }
 }
@@ -116,7 +117,7 @@ impl AppSettings {
             AppType::Claude => self.current_provider_claude.as_deref(),
             AppType::Codex => self.current_provider_codex.as_deref(),
             AppType::Gemini => self.current_provider_gemini.as_deref(),
-            AppType::OpenCode => None, // OpenCode 使用累加模式
+            AppType::OpenCode | AppType::OpenClaw => None, // OpenCode/OpenClaw 使用累加模式
         }
     }
 
@@ -127,7 +128,7 @@ impl AppSettings {
             AppType::Claude => self.current_provider_claude = value,
             AppType::Codex => self.current_provider_codex = value,
             AppType::Gemini => self.current_provider_gemini = value,
-            AppType::OpenCode => {} // OpenCode 使用累加模式
+            AppType::OpenCode | AppType::OpenClaw => {} // OpenCode/OpenClaw 使用累加模式
         }
     }
 
@@ -138,6 +139,7 @@ impl AppSettings {
             AppType::Codex => self.codex_config_dir.as_ref(),
             AppType::Gemini => self.gemini_config_dir.as_ref(),
             AppType::OpenCode => self.opencode_config_dir.as_ref(),
+            AppType::OpenClaw => None, // OpenClaw 暂不支持目录覆盖
         };
         dir.map(PathBuf::from)
     }

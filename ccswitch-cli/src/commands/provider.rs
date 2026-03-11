@@ -164,8 +164,8 @@ api_key = "{}"
 
             json!(config)
         }
-        AppType::OpenCode => {
-            print_warning("OpenCode 供应商添加功能尚未完全实现");
+        AppType::OpenCode | AppType::OpenClaw => {
+            print_warning("该应用供应商添加功能尚未完全实现");
             json!({})
         }
     };
@@ -478,8 +478,8 @@ api_key = "{}"
                         }
                     }
                 }
-                AppType::OpenCode => {
-                    print_warning("OpenCode 供应商编辑功能尚未完全实现");
+                AppType::OpenCode | AppType::OpenClaw => {
+                    print_warning("该应用供应商编辑功能尚未完全实现");
                 }
             }
 
@@ -651,7 +651,7 @@ async fn test_api_key(
                 bail!("HTTP {}: {}", status, body);
             }
         }
-        AppType::Codex | AppType::OpenCode => {
+        AppType::Codex | AppType::OpenCode | AppType::OpenClaw => {
             // OpenAI 兼容 API
             let url = format!(
                 "{}/chat/completions",
@@ -723,7 +723,7 @@ async fn test_api_key(
 fn get_default_base_url(app_type: &AppType) -> String {
     match app_type {
         AppType::Claude => "https://api.anthropic.com".to_string(),
-        AppType::Codex | AppType::OpenCode => "https://api.openai.com/v1".to_string(),
+        AppType::Codex | AppType::OpenCode | AppType::OpenClaw => "https://api.openai.com/v1".to_string(),
         AppType::Gemini => "https://generativelanguage.googleapis.com".to_string(),
     }
 }
@@ -732,7 +732,7 @@ fn get_default_base_url(app_type: &AppType) -> String {
 fn get_default_model(app_type: &AppType) -> String {
     match app_type {
         AppType::Claude => "claude-sonnet-4-20250514".to_string(),
-        AppType::Codex | AppType::OpenCode => "gpt-4".to_string(),
+        AppType::Codex | AppType::OpenCode | AppType::OpenClaw => "gpt-4".to_string(),
         AppType::Gemini => "gemini-1.5-flash".to_string(),
     }
 }

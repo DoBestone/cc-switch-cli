@@ -150,6 +150,9 @@ impl McpService {
             AppType::Codex => Self::write_codex_mcp(&enabled_servers)?,
             AppType::Gemini => Self::write_gemini_mcp(&enabled_servers)?,
             AppType::OpenCode => Self::write_opencode_mcp(&enabled_servers)?,
+            AppType::OpenClaw => {
+                // OpenClaw 不支持 MCP，跳过
+            }
         }
 
         Ok(())
@@ -172,6 +175,7 @@ impl McpService {
             AppType::Codex => Self::read_codex_mcp(),
             AppType::Gemini => Self::read_gemini_mcp(),
             AppType::OpenCode => Self::read_opencode_mcp(),
+            AppType::OpenClaw => Ok(IndexMap::new()), // OpenClaw 不支持 MCP
         }
     }
 

@@ -1,6 +1,6 @@
 [package]
 name = "ccswitch-cli"
-version = "1.1.1"
+version = "1.2.0"
 edition = "2021"
 authors = ["CC-Switch Contributors"]
 description = "CLI tool for managing Claude Code, Codex, and Gemini CLI configurations"
@@ -31,6 +31,7 @@ tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
+json5 = "0.4"
 chrono = "0.4"
 indexmap = { version = "2", features = ["serde"] }
 
@@ -47,6 +48,11 @@ anyhow = "1.0"
 # TUI framework
 ratatui = "0.28"
 crossterm = "0.28"
+
+# Web server for web controller
+axum = "0.7"
+tower = "0.5"
+tower-http = { version = "0.6", features = ["fs", "cors"] }
 
 [dev-dependencies]
 assert_cmd = "2"

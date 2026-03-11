@@ -325,13 +325,21 @@ pub fn main_menu() -> Result<()> {
         println!("  {} {} - 管理 MCP 服务器", "8.".green(), "MCP 服务器".white());
         println!("  {} {} - 管理系统提示词", "9.".green(), "Prompts".white());
         println!(" {} {} - 管理 Skills 扩展", "10.".green(), "Skills".white());
+        println!(" {} {} - 管理 OpenClaw 配置", "11.".green(), "OpenClaw".white());
+        println!();
+        println!("{}", "── 高级功能 ──".dimmed());
+        println!(" {} {} - 管理故障转移队列", "12.".green(), "故障转移".white());
+        println!(" {} {} - 查看使用量统计", "13.".green(), "使用统计".white());
+        println!(" {} {} - WebDAV 云端同步", "14.".green(), "云端同步".white());
+        println!(" {} {} - 启动 Web 控制器", "15.".green(), "Web 控制器".white());
         println!();
         println!("{}", "── 工具 ──".dimmed());
-        println!(" {} {} - 设置全局代理", "11.".green(), "代理设置".white());
-        println!(" {} {} - 测试 API 端点延迟", "12.".green(), "端点测速".white());
-        println!(" {} {} - 检测环境变量冲突", "13.".green(), "环境检测".white());
-        println!(" {} {} - 查看配置文件路径", "14.".green(), "查看配置".white());
-        println!(" {} {} - 检测更新/自动更新", "15.".green(), "检测更新".white());
+        println!(" {} {} - 设置全局代理", "16.".green(), "代理设置".white());
+        println!(" {} {} - 测试 API 端点延迟", "17.".green(), "端点测速".white());
+        println!(" {} {} - 检测环境变量冲突", "18.".green(), "环境检测".white());
+        println!(" {} {} - 查看配置文件路径", "19.".green(), "查看配置".white());
+        println!(" {} {} - 检测更新/自动更新", "20.".green(), "检测更新".white());
+        println!(" {} {} - 批量操作", "21.".green(), "批量操作".white());
         println!();
         println!("  {} {} - 退出程序", "0.".green(), "退出".white());
         println!();
@@ -405,35 +413,77 @@ pub fn main_menu() -> Result<()> {
                 }
                 pause();
             }
-            "11" | "proxy" => {
+            "11" | "openclaw" => {
+                clear_screen();
+                if let Err(e) = interactive_openclaw(&ctx) {
+                    println!("{}", format!("错误: {}", e).red());
+                }
+                pause();
+            }
+            "12" | "failover" => {
+                clear_screen();
+                if let Err(e) = interactive_failover(&ctx) {
+                    println!("{}", format!("错误: {}", e).red());
+                }
+                pause();
+            }
+            "13" | "usage" => {
+                clear_screen();
+                if let Err(e) = interactive_usage(&ctx) {
+                    println!("{}", format!("错误: {}", e).red());
+                }
+                pause();
+            }
+            "14" | "webdav" => {
+                clear_screen();
+                if let Err(e) = interactive_webdav(&ctx) {
+                    println!("{}", format!("错误: {}", e).red());
+                }
+                pause();
+            }
+            "15" | "web" => {
+                clear_screen();
+                if let Err(e) = interactive_web(&ctx) {
+                    println!("{}", format!("错误: {}", e).red());
+                }
+                pause();
+            }
+            "16" | "proxy" => {
                 clear_screen();
                 if let Err(e) = interactive_proxy(&ctx) {
                     println!("{}", format!("错误: {}", e).red());
                 }
                 pause();
             }
-            "12" | "speedtest" | "speed" => {
+            "17" | "speedtest" | "speed" => {
                 clear_screen();
                 if let Err(e) = interactive_speedtest(&ctx) {
                     println!("{}", format!("错误: {}", e).red());
                 }
                 pause();
             }
-            "13" | "env" => {
+            "18" | "env" => {
                 clear_screen();
                 if let Err(e) = interactive_env(&ctx) {
                     println!("{}", format!("错误: {}", e).red());
                 }
                 pause();
             }
-            "14" | "config" => {
+            "19" | "config" => {
                 clear_screen();
                 commands::config::show_paths(&ctx, AppTypeArg::All)?;
                 pause();
             }
-            "15" | "update" | "upgrade" => {
+            "20" | "update" | "upgrade" => {
                 clear_screen();
                 if let Err(e) = interactive_update(&ctx) {
+                    println!("{}", format!("错误: {}", e).red());
+                }
+                pause();
+            }
+            "21" | "batch" => {
+                clear_screen();
+                if let Err(e) = interactive_batch(&ctx) {
                     println!("{}", format!("错误: {}", e).red());
                 }
                 pause();
@@ -449,7 +499,7 @@ pub fn main_menu() -> Result<()> {
                 continue;
             }
             _ => {
-                println!("{}", "无效选择，请输入 0-15".yellow());
+                println!("{}", "无效选择，请输入 0-21".yellow());
                 std::thread::sleep(std::time::Duration::from_millis(1000));
             }
         }
@@ -469,6 +519,7 @@ fn interactive_switch(ctx: &OutputContext) -> Result<()> {
         AppType::Codex => AppTypeArg::Codex,
         AppType::Gemini => AppTypeArg::Gemini,
         AppType::OpenCode => AppTypeArg::Opencode,
+        AppType::OpenClaw => AppTypeArg::Openclaw,
     };
 
     commands::provider::switch(ctx, &name, app_arg)?;
@@ -487,6 +538,7 @@ fn interactive_add(ctx: &OutputContext) -> Result<()> {
         AppType::Codex => AppTypeArg::Codex,
         AppType::Gemini => AppTypeArg::Gemini,
         AppType::OpenCode => AppTypeArg::Opencode,
+        AppType::OpenClaw => AppTypeArg::Openclaw,
     };
 
     // 根据应用类型收集不同的配置
@@ -525,9 +577,9 @@ fn interactive_add(ctx: &OutputContext) -> Result<()> {
                 Some(api_key), base_url, model, None, None, false
             )?;
         }
-        AppType::OpenCode => {
-            println!("{}", "OpenCode 配置暂不支持交互式添加".yellow());
-            println!("请使用: cc-switch add <名称> --app opencode --from-file <配置文件>");
+        AppType::OpenCode | AppType::OpenClaw => {
+            println!("{}", "该应用配置暂不支持交互式添加".yellow());
+            println!("请使用: cc-switch add <名称> --app <应用> --from-file <配置文件>");
         }
     }
 
@@ -547,6 +599,7 @@ fn interactive_remove(ctx: &OutputContext) -> Result<()> {
         AppType::Codex => AppTypeArg::Codex,
         AppType::Gemini => AppTypeArg::Gemini,
         AppType::OpenCode => AppTypeArg::Opencode,
+        AppType::OpenClaw => AppTypeArg::Openclaw,
     };
 
     commands::provider::remove(ctx, &name, app_arg, false)?;
@@ -566,6 +619,7 @@ fn interactive_edit(ctx: &OutputContext) -> Result<()> {
         AppType::Codex => AppTypeArg::Codex,
         AppType::Gemini => AppTypeArg::Gemini,
         AppType::OpenCode => AppTypeArg::Opencode,
+        AppType::OpenClaw => AppTypeArg::Openclaw,
     };
 
     println!("\n{}", "修改配置 (留空保持不变):".white().bold());
@@ -612,6 +666,7 @@ fn interactive_test(ctx: &OutputContext) -> Result<()> {
                     AppType::Codex => AppTypeArg::Codex,
                     AppType::Gemini => AppTypeArg::Gemini,
                     AppType::OpenCode => AppTypeArg::Opencode,
+                    AppType::OpenClaw => AppTypeArg::Openclaw,
                 };
 
                 tokio::runtime::Runtime::new()
@@ -630,6 +685,7 @@ fn interactive_test(ctx: &OutputContext) -> Result<()> {
                     AppType::Codex => AppTypeArg::Codex,
                     AppType::Gemini => AppTypeArg::Gemini,
                     AppType::OpenCode => AppTypeArg::Opencode,
+                    AppType::OpenClaw => AppTypeArg::Openclaw,
                 };
 
                 tokio::runtime::Runtime::new()
@@ -720,6 +776,7 @@ fn interactive_prompt(ctx: &OutputContext) -> Result<()> {
                     AppType::Codex => AppTypeArg::Codex,
                     AppType::Gemini => AppTypeArg::Gemini,
                     AppType::OpenCode => AppTypeArg::Opencode,
+                    AppType::OpenClaw => AppTypeArg::Openclaw,
                 };
                 let name = read_required("Prompt 名称")?;
                 let content = read_required("Prompt 内容")?;
@@ -934,6 +991,345 @@ fn interactive_update(ctx: &OutputContext) -> Result<()> {
                 tokio::runtime::Runtime::new()
                     .unwrap()
                     .block_on(commands::update::self_update(ctx, true))?;
+                pause();
+            }
+            "0" | "q" | "back" => return Ok(()),
+            "" => continue,
+            _ => {
+                println!("{}", "无效选择".yellow());
+                std::thread::sleep(std::time::Duration::from_millis(1000));
+            }
+        }
+    }
+}
+
+/// 交互式 OpenClaw 管理
+fn interactive_openclaw(ctx: &OutputContext) -> Result<()> {
+    loop {
+        clear_screen();
+        println!("{}", "═══ OpenClaw 配置管理 ═══".cyan().bold());
+        println!();
+        println!("  {} {} - 列出 OpenClaw 供应商", "1.".green(), "列出".white());
+        println!("  {} {} - 查看配置路径", "2.".green(), "配置路径".white());
+        println!("  {} {} - 健康检查", "3.".green(), "健康检查".white());
+        println!("  {} {} - 导出配置", "4.".green(), "导出".white());
+        println!("  {} {} - 返回主菜单", "0.".green(), "返回".white());
+        println!();
+
+        let choice = read_input("请选择: ")?;
+        match choice.as_str() {
+            "1" | "list" => {
+                clear_screen();
+                commands::openclaw::list_providers(ctx, false)?;
+                pause();
+            }
+            "2" | "path" => {
+                clear_screen();
+                commands::openclaw::show_config_path(ctx)?;
+                pause();
+            }
+            "3" | "health" => {
+                clear_screen();
+                commands::openclaw::health_check(ctx, false)?;
+                pause();
+            }
+            "4" | "export" => {
+                clear_screen();
+                commands::openclaw::export_config(ctx)?;
+                pause();
+            }
+            "0" | "q" | "back" => return Ok(()),
+            "" => continue,
+            _ => {
+                println!("{}", "无效选择".yellow());
+                std::thread::sleep(std::time::Duration::from_millis(1000));
+            }
+        }
+    }
+}
+
+/// 交互式故障转移管理
+fn interactive_failover(ctx: &OutputContext) -> Result<()> {
+    loop {
+        clear_screen();
+        println!("{}", "═══ 故障转移队列管理 ═══".cyan().bold());
+        println!();
+        println!("  {} {} - 查看故障转移队列", "1.".green(), "查看队列".white());
+        println!("  {} {} - 添加供应商到队列", "2.".green(), "添加".white());
+        println!("  {} {} - 从队列移除供应商", "3.".green(), "移除".white());
+        println!("  {} {} - 清空队列", "4.".green(), "清空".white());
+        println!("  {} {} - 返回主菜单", "0.".green(), "返回".white());
+        println!();
+
+        let choice = read_input("请选择: ")?;
+        match choice.as_str() {
+            "1" | "list" => {
+                clear_screen();
+                let app_type = select_app_type()?;
+                commands::failover::list(ctx, app_type)?;
+                pause();
+            }
+            "2" | "add" => {
+                clear_screen();
+                let app_type = select_app_type()?;
+                let provider_id = read_required("供应商 ID")?;
+                commands::failover::add(ctx, app_type, &provider_id)?;
+                pause();
+            }
+            "3" | "remove" => {
+                clear_screen();
+                let app_type = select_app_type()?;
+                let provider_id = read_required("供应商 ID")?;
+                commands::failover::remove(ctx, app_type, &provider_id)?;
+                pause();
+            }
+            "4" | "clear" => {
+                clear_screen();
+                let app_type = select_app_type()?;
+                commands::failover::clear(ctx, app_type)?;
+                pause();
+            }
+            "0" | "q" | "back" => return Ok(()),
+            "" => continue,
+            _ => {
+                println!("{}", "无效选择".yellow());
+                std::thread::sleep(std::time::Duration::from_millis(1000));
+            }
+        }
+    }
+}
+
+/// 交互式使用量统计
+fn interactive_usage(ctx: &OutputContext) -> Result<()> {
+    loop {
+        clear_screen();
+        println!("{}", "═══ 使用量统计 ═══".cyan().bold());
+        println!();
+        println!("  {} {} - 查看使用量汇总", "1.".green(), "汇总".white());
+        println!("  {} {} - 查看每日趋势", "2.".green(), "趋势".white());
+        println!("  {} {} - 查看供应商统计", "3.".green(), "供应商".white());
+        println!("  {} {} - 检查限额状态", "4.".green(), "限额".white());
+        println!("  {} {} - 返回主菜单", "0.".green(), "返回".white());
+        println!();
+
+        let choice = read_input("请选择: ")?;
+        match choice.as_str() {
+            "1" | "summary" => {
+                clear_screen();
+                commands::usage::summary(ctx, None)?;
+                pause();
+            }
+            "2" | "trends" => {
+                clear_screen();
+                let days_str = read_optional("天数", Some("7"))?;
+                let days = days_str.and_then(|s| s.parse().ok()).unwrap_or(7);
+                commands::usage::trends(ctx, days)?;
+                pause();
+            }
+            "3" | "provider" => {
+                clear_screen();
+                commands::usage::provider_stats(ctx)?;
+                pause();
+            }
+            "4" | "limit" => {
+                clear_screen();
+                let provider_id = read_required("供应商 ID")?;
+                let app_type = select_app_type()?;
+                commands::usage::check_limit(ctx, app_type, &provider_id)?;
+                pause();
+            }
+            "0" | "q" | "back" => return Ok(()),
+            "" => continue,
+            _ => {
+                println!("{}", "无效选择".yellow());
+                std::thread::sleep(std::time::Duration::from_millis(1000));
+            }
+        }
+    }
+}
+
+/// 交互式 WebDAV 同步
+fn interactive_webdav(ctx: &OutputContext) -> Result<()> {
+    loop {
+        clear_screen();
+        println!("{}", "═══ WebDAV 云端同步 ═══".cyan().bold());
+        println!();
+        println!("  {} {} - 查看 WebDAV 配置", "1.".green(), "查看配置".white());
+        println!("  {} {} - 配置 WebDAV 连接", "2.".green(), "配置".white());
+        println!("  {} {} - 测试连接", "3.".green(), "测试".white());
+        println!("  {} {} - 上传配置到云端", "4.".green(), "上传".white());
+        println!("  {} {} - 从云端下载配置", "5.".green(), "下载".white());
+        println!("  {} {} - 查看远程配置信息", "6.".green(), "远程信息".white());
+        println!("  {} {} - 返回主菜单", "0.".green(), "返回".white());
+        println!();
+
+        let choice = read_input("请选择: ")?;
+        match choice.as_str() {
+            "1" | "config" => {
+                clear_screen();
+                commands::webdav::show_config(ctx)?;
+                pause();
+            }
+            "2" | "setup" => {
+                clear_screen();
+                let url = read_required("WebDAV URL")?;
+                let username = read_required("用户名")?;
+                let password = read_required("密码")?;
+                let remote_root = read_optional("远程目录", Some("/cc-switch"))?;
+                commands::webdav::configure(&url, &username, &password, remote_root.as_deref())?;
+                pause();
+            }
+            "3" | "test" => {
+                clear_screen();
+                commands::webdav::test()?;
+                pause();
+            }
+            "4" | "upload" => {
+                clear_screen();
+                commands::webdav::upload(ctx)?;
+                pause();
+            }
+            "5" | "download" => {
+                clear_screen();
+                commands::webdav::download(ctx)?;
+                pause();
+            }
+            "6" | "info" => {
+                clear_screen();
+                commands::webdav::remote_info(ctx)?;
+                pause();
+            }
+            "0" | "q" | "back" => return Ok(()),
+            "" => continue,
+            _ => {
+                println!("{}", "无效选择".yellow());
+                std::thread::sleep(std::time::Duration::from_millis(1000));
+            }
+        }
+    }
+}
+
+/// 交互式 Web 控制器
+fn interactive_web(_ctx: &OutputContext) -> Result<()> {
+    println!("\n{}", "═══ Web 控制器 ═══".cyan().bold());
+    println!();
+    println!("启动 Web UI 服务，通过浏览器管理配置。");
+    println!();
+    println!("{}", "⚠️  安全警告:".yellow());
+    println!("  • 服务绑定所有网络接口，可从公网访问");
+    println!("  • 配置完成后请及时关闭 (Ctrl+C)");
+    println!("  • 建议在可信网络环境中使用");
+    println!();
+
+    let port_str = read_optional("端口", Some("8000"))?;
+    let port = port_str.and_then(|s| s.parse().ok()).unwrap_or(8000);
+
+    let host = read_optional("绑定地址", Some("0.0.0.0"))?;
+    let host = host.unwrap_or_else(|| "0.0.0.0".to_string());
+
+    println!();
+    println!("{}", format!("正在启动 Web 服务器，访问地址: http://{}:{}", host, port).green());
+    println!("{}", "按 Ctrl+C 停止服务".yellow());
+    println!();
+
+    // 启动 Web 服务器
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    rt.block_on(async {
+        let app = crate::web::create_router();
+        let addr: std::net::SocketAddr = format!("{}:{}", host, port)
+            .parse()
+            .map_err(|e| anyhow::anyhow!("无效的地址: {}", e))?;
+
+        println!("{}", "╔══════════════════════════════════════════════════════════════╗".cyan());
+        println!("{}", "║           🌐 CC-Switch Web 控制器已启动                      ║".cyan());
+        println!("{}", "╠══════════════════════════════════════════════════════════════╣".cyan());
+        println!("║  访问地址: http://{}:{}                                   ║", host, port);
+        println!("{}", "║                                                              ║".cyan());
+        println!("{}", "║  ⚠️  安全提示:                                               ║".cyan());
+        println!("{}", "║  • 此服务绑定所有网络接口，可从公网访问                       ║".cyan());
+        println!("{}", "║  • 配置完成后请及时关闭 (Ctrl+C)                             ║".cyan());
+        println!("{}", "║  • 建议在防火墙后使用或使用临时会话                          ║".cyan());
+        println!("{}", "╚══════════════════════════════════════════════════════════════╝".cyan());
+        println!();
+
+        let listener = tokio::net::TcpListener::bind(addr).await?;
+        axum::serve(listener, app).await?;
+
+        Ok(())
+    })
+}
+
+/// 交互式批量操作
+fn interactive_batch(ctx: &OutputContext) -> Result<()> {
+    loop {
+        clear_screen();
+        println!("{}", "═══ 批量操作 ═══".cyan().bold());
+        println!();
+        println!("  {} {} - 批量切换所有应用", "1.".green(), "批量切换".white());
+        println!("  {} {} - 批量测试所有供应商", "2.".green(), "批量测试".white());
+        println!("  {} {} - 批量导出配置", "3.".green(), "批量导出".white());
+        println!("  {} {} - 批量导入配置", "4.".green(), "批量导入".white());
+        println!("  {} {} - 批量同步配置", "5.".green(), "批量同步".white());
+        println!("  {} {} - 返回主菜单", "0.".green(), "返回".white());
+        println!();
+
+        let choice = read_input("请选择: ")?;
+        match choice.as_str() {
+            "1" | "switch" => {
+                clear_screen();
+                let name = read_required("供应商名称")?;
+                commands::batch::batch_switch(ctx, &name)?;
+                pause();
+            }
+            "2" | "test" => {
+                clear_screen();
+                println!("{}", "正在测试所有供应商...".yellow());
+                tokio::runtime::Runtime::new()
+                    .unwrap()
+                    .block_on(commands::batch::batch_test(ctx, AppTypeArg::All, 30, true))?;
+                pause();
+            }
+            "3" | "export" => {
+                clear_screen();
+                let output = read_required("输出文件路径")?;
+                commands::batch::batch_export(ctx, &output, AppTypeArg::All)?;
+                pause();
+            }
+            "4" | "import" => {
+                clear_screen();
+                let input = read_required("输入文件路径")?;
+                let overwrite_str = read_optional("覆盖已存在的配置? (y/N)", None)?;
+                let overwrite = overwrite_str.map(|s| s.to_lowercase() == "y").unwrap_or(false);
+                commands::batch::batch_import(ctx, &input, overwrite)?;
+                pause();
+            }
+            "5" | "sync" => {
+                clear_screen();
+                println!("{}", "从哪个应用同步?".cyan());
+                println!("  {} Claude", "1.".green());
+                println!("  {} Codex", "2.".green());
+                println!("  {} Gemini", "3.".green());
+                let from_choice = read_input("请选择: ")?;
+                let from_app = match from_choice.as_str() {
+                    "1" => AppTypeArg::Claude,
+                    "2" => AppTypeArg::Codex,
+                    "3" => AppTypeArg::Gemini,
+                    _ => {
+                        println!("{}", "无效选择".yellow());
+                        pause();
+                        continue;
+                    }
+                };
+
+                let _target_apps = match from_app {
+                    AppTypeArg::Claude => vec![AppTypeArg::Codex, AppTypeArg::Gemini],
+                    AppTypeArg::Codex => vec![AppTypeArg::Claude, AppTypeArg::Gemini],
+                    AppTypeArg::Gemini => vec![AppTypeArg::Claude, AppTypeArg::Codex],
+                    _ => vec![],
+                };
+
+                commands::batch::batch_sync(ctx, from_app.to_app_types().into_iter().next().unwrap(),
+                    from_app.to_app_types(), false)?;
                 pause();
             }
             "0" | "q" | "back" => return Ok(()),

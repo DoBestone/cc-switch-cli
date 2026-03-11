@@ -32,6 +32,10 @@ impl SkillService {
             AppType::Codex => get_codex_config_dir().join("skills"),
             AppType::Gemini => get_gemini_config_dir().join("skills"),
             AppType::OpenCode => get_opencode_config_dir().join("skills"),
+            AppType::OpenClaw => {
+                // OpenClaw 不支持 Skills，返回空路径
+                PathBuf::new()
+            }
         }
     }
 

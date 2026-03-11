@@ -277,6 +277,39 @@ pub struct ProviderMeta {
     /// 供应商单独的代理配置
     #[serde(skip_serializing_if = "Option::is_none")]
     pub proxy_config: Option<ProviderProxyConfig>,
+    /// 是否启用通用配置
+    #[serde(rename = "commonConfigEnabled", skip_serializing_if = "Option::is_none")]
+    pub common_config_enabled: Option<bool>,
+    /// 是否自动选择端点
+    #[serde(rename = "endpointAutoSelect", skip_serializing_if = "Option::is_none")]
+    pub endpoint_auto_select: Option<bool>,
+    /// 是否为合作伙伴
+    #[serde(rename = "isPartner", skip_serializing_if = "Option::is_none")]
+    pub is_partner: Option<bool>,
+    /// 合作伙伴推广 Key
+    #[serde(rename = "partnerPromotionKey", skip_serializing_if = "Option::is_none")]
+    pub partner_promotion_key: Option<String>,
+    /// 成本倍率
+    #[serde(rename = "costMultiplier", skip_serializing_if = "Option::is_none")]
+    pub cost_multiplier: Option<String>,
+    /// 定价模型来源
+    #[serde(rename = "pricingModelSource", skip_serializing_if = "Option::is_none")]
+    pub pricing_model_source: Option<String>,
+    /// 每日限额（美元）
+    #[serde(rename = "limitDailyUsd", skip_serializing_if = "Option::is_none")]
+    pub limit_daily_usd: Option<String>,
+    /// 每月限额（美元）
+    #[serde(rename = "limitMonthlyUsd", skip_serializing_if = "Option::is_none")]
+    pub limit_monthly_usd: Option<String>,
+    /// API 格式 (anthropic/openai_chat/openai_responses)
+    #[serde(rename = "apiFormat", skip_serializing_if = "Option::is_none")]
+    pub api_format: Option<String>,
+    /// API Key 字段名
+    #[serde(rename = "apiKeyField", skip_serializing_if = "Option::is_none")]
+    pub api_key_field: Option<String>,
+    /// Prompt Cache Key
+    #[serde(rename = "promptCacheKey", skip_serializing_if = "Option::is_none")]
+    pub prompt_cache_key: Option<String>,
 }
 
 /// 用量数据

@@ -2,6 +2,8 @@
 //!
 //! 处理供应商的 CRUD 操作、切换和配置管理。
 
+use std::collections::HashMap;
+
 use indexmap::IndexMap;
 use serde_json::Value;
 
@@ -185,7 +187,7 @@ impl ProviderService {
             AppType::Claude => Self::validate_claude_settings(provider),
             AppType::Codex => Self::validate_codex_settings(provider),
             AppType::Gemini => Self::validate_gemini_settings(provider),
-            AppType::OpenCode => Ok(()), // OpenCode 验证较宽松
+            AppType::OpenCode | AppType::OpenClaw => Ok(()), // OpenCode/OpenClaw 验证较宽松
         }
     }
 
@@ -266,6 +268,7 @@ impl ProviderService {
             AppType::Codex => Self::write_codex_live(provider),
             AppType::Gemini => Self::write_gemini_live(provider),
             AppType::OpenCode => Self::write_opencode_live(provider),
+            AppType::OpenClaw => Self::write_openclaw_live(provider),
         }
     }
 
@@ -298,6 +301,62 @@ impl ProviderService {
     fn write_opencode_live(_provider: &Provider) -> Result<(), AppError> {
         // OpenCode 使用累加模式，需要单独处理
         // TODO: 实现 OpenCode 配置写入
+        Ok(())
+    }
+
+    fn write_openclaw_live(provider: &Provider) -> Result<(), AppError> {
+        use crate::openclaw_config::{set_provider as set_openclaw_provider, OpenClawProviderConfig, OpenClawModelEntry};
+        use serde_json::json;
+
+        // 从 Provider 配置中提取 OpenClaw 所需的字段
+        let base_url = provider.settings_config.get("baseUrl")
+            .or_else(|| provider.settings_config.get("base_url"))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+
+        let api_key = provider.settings_config.get("apiKey")
+            .or_else(|| provider.settings_config.get("api_key"))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+
+        let api = provider.settings_config.get("api")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+
+        // 提取模型配置
+        let models: Vec<OpenClawModelEntry> = provider.settings_config.get("models")
+            .and_then(|v| v.as_array())
+            .map(|arr| {
+                arr.iter().filter_map(|m| {
+                    let id = m.get("id").and_then(|v| v.as_str())?;
+                    Some(OpenClawModelEntry {
+                        id: id.to_string(),
+                        name: m.get("name").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                        alias: m.get("alias").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                        cost: None,
+                        context_window: m.get("contextWindow")
+                            .or_else(|| m.get("context_window"))
+                            .and_then(|v| v.as_u64())
+                            .map(|n| n as u32),
+                        extra: HashMap::new(),
+                    })
+                }).collect()
+            })
+            .unwrap_or_default();
+
+        // 构建 OpenClaw 供应商配置
+        let openclaw_config = OpenClawProviderConfig {
+            base_url,
+            api_key,
+            api,
+            models,
+            headers: HashMap::new(),
+            extra: HashMap::new(),
+        };
+
+        // 写入配置
+        set_openclaw_provider(&provider.id, json!(openclaw_config))?;
+
         Ok(())
     }
 
@@ -342,8 +401,8 @@ impl ProviderService {
                     Ok(Value::Object(serde_json::Map::new()))
                 }
             }
-            AppType::OpenCode => {
-                // TODO: 实现 OpenCode 配置读取
+            AppType::OpenCode | AppType::OpenClaw => {
+                // OpenCode/OpenClaw 使用累加模式
                 Ok(Value::Object(serde_json::Map::new()))
             }
         }
@@ -416,7 +475,7 @@ impl ProviderService {
 
                 Ok((api_key, base_url))
             }
-            AppType::OpenCode => Ok((String::new(), String::new())),
+            AppType::OpenCode | AppType::OpenClaw => Ok((String::new(), String::new())),
         }
     }
 }

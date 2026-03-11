@@ -8,7 +8,7 @@ use crate::app_config::AppType;
 use crate::config::{
     get_app_config_dir, get_claude_config_dir, get_claude_mcp_path, get_claude_settings_path,
     get_codex_auth_path, get_codex_config_dir, get_codex_config_path, get_gemini_config_dir,
-    get_gemini_settings_path, get_opencode_config_dir,
+    get_gemini_settings_path, get_openclaw_config_dir, get_opencode_config_dir,
 };
 use crate::error::AppError;
 
@@ -108,6 +108,12 @@ impl ConfigService {
                 mcp_path: None,
                 auth_path: None,
             },
+            AppType::OpenClaw => AppConfigPaths {
+                config_dir: get_openclaw_config_dir(),
+                settings_path: get_openclaw_config_dir().join("openclaw.json"),
+                mcp_path: None,
+                auth_path: None,
+            },
         }
     }
 
@@ -134,6 +140,31 @@ impl ConfigService {
     ) -> Result<(), AppError> {
         // TODO: 实现配置导出
         Err(AppError::Message("导出功能尚未实现".to_string()))
+    }
+
+    /// 导出所有配置为 JSON
+    pub fn export_all(state: &crate::store::AppState) -> Result<serde_json::Value, AppError> {
+        use serde_json::json;
+
+        let mut config = json!({});
+
+        // 导出所有应用的供应商
+        for app in AppType::all() {
+            let providers = state.db.get_all_providers(app.as_str())?;
+            let providers_json: serde_json::Map<String, serde_json::Value> = providers
+                .into_iter()
+                .map(|(id, p)| {
+                    let value = serde_json::to_value(&p).unwrap_or_default();
+                    (id, value)
+                })
+                .collect();
+
+            if let Some(obj) = config.as_object_mut() {
+                obj.insert(format!("{}_providers", app.as_str()), serde_json::Value::Object(providers_json));
+            }
+        }
+
+        Ok(config)
     }
 
     /// 导入配置

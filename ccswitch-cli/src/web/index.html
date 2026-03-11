@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CC-Switch Web 控制器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #e0e0e0;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; padding: 30px 0; border-bottom: 1px solid #333; margin-bottom: 30px; }
+        header h1 {
+            font-size: 2em;
+            background: linear-gradient(90deg, #00d4ff, #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .warning {
+            background: #ff6b3520;
+            border: 1px solid #ff6b35;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .tab {
+            padding: 12px 24px;
+            background: #2a2a4a;
+            border: none;
+            border-radius: 8px;
+            color: #e0e0e0;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .tab:hover { background: #3a3a6a; }
+        .tab.active { background: linear-gradient(90deg, #00d4ff, #7c3aed); color: white; }
+        .card { background: #2a2a4a; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+        .card h2 { margin-bottom: 15px; color: #00d4ff; }
+        .provider-list { display: grid; gap: 15px; }
+        .provider-item {
+            background: #1a1a3a;
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .provider-info { flex: 1; min-width: 200px; }
+        .provider-name { font-weight: bold; color: #00d4ff; font-size: 1.1em; }
+        .provider-details { color: #888; font-size: 0.9em; margin-top: 5px; }
+        .provider-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+        .btn-primary { background: linear-gradient(90deg, #00d4ff, #7c3aed); color: white; }
+        .btn-success { background: #10b981; color: white; }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-secondary { background: #4b5563; color: white; }
+        .btn-small { padding: 6px 12px; font-size: 12px; }
+        .active-badge { background: #10b981; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal.show { display: flex; }
+        .modal-content {
+            background: #2a2a4a;
+            border-radius: 12px;
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-close { background: none; border: none; color: #888; font-size: 24px; cursor: pointer; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; color: #888; }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            background: #1a1a3a;
+            border: 1px solid #333;
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-size: 14px;
+        }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: #00d4ff; }
+        .help-text { color: #666; font-size: 12px; margin-top: 5px; }
+        .status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .status-item { background: #1a1a3a; border-radius: 8px; padding: 15px; text-align: center; }
+        .status-app { font-size: 1.2em; font-weight: bold; color: #00d4ff; margin-bottom: 10px; }
+        .status-provider { color: #10b981; font-size: 0.9em; }
+        .status-count { color: #888; font-size: 0.8em; margin-top: 5px; }
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            z-index: 2000;
+            animation: slideIn 0.3s ease;
+        }
+        .toast.success { background: #10b981; }
+        .toast.error { background: #ef4444; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .loading { text-align: center; padding: 40px; color: #888; }
+        .empty-state { text-align: center; padding: 40px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔄 CC-Switch Web 控制器</h1>
+            <p style="color: #888; margin-top: 10px;">管理 Claude / Codex / Gemini / OpenClaw 供应商配置</p>
+        </header>
+
+        <div class="warning">
+            <span style="font-size: 24px;">⚠️</span>
+            <div>
+                <strong>安全提醒：</strong>此服务绑定所有网络接口，配置完成后请及时关闭（在终端按 Ctrl+C）
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('status')">📊 状态概览</button>
+            <button class="tab" onclick="showTab('claude')">🤖 Claude</button>
+            <button class="tab" onclick="showTab('codex')">💻 Codex</button>
+            <button class="tab" onclick="showTab('gemini')">✨ Gemini</button>
+            <button class="tab" onclick="showTab('openclaw')">🦀 OpenClaw</button>
+        </div>
+
+        <div id="content"><div class="loading">加载中...</div></div>
+    </div>
+
+    <div id="addModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">添加供应商</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <form id="providerForm">
+                <input type="hidden" id="editMode" value="">
+                <div class="form-group">
+                    <label>应用类型</label>
+                    <select id="providerApp" required>
+                        <option value="claude">Claude</option>
+                        <option value="codex">Codex</option>
+                        <option value="gemini">Gemini</option>
+                        <option value="openclaw">OpenClaw</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>供应商名称</label>
+                    <input type="text" id="providerName" placeholder="例如: 我的API" required>
+                </div>
+                <div class="form-group">
+                    <label>API Key</label>
+                    <input type="password" id="providerKey" placeholder="sk-...">
+                    <p class="help-text">编辑时留空保持不变</p>
+                </div>
+                <div class="form-group">
+                    <label>Base URL</label>
+                    <input type="text" id="providerUrl" placeholder="https://api.anthropic.com">
+                </div>
+                <div class="form-group">
+                    <label>主模型</label>
+                    <input type="text" id="providerModel" placeholder="claude-sonnet-4-20250514">
+                </div>
+                <div class="form-group">
+                    <label>小模型</label>
+                    <input type="text" id="providerSmallModel" placeholder="claude-haiku-4-20250514">
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">保存</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let currentTab = 'status';
+        document.addEventListener('DOMContentLoaded', () => loadStatus());
+
+        function showTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            tab === 'status' ? loadStatus() : loadProviders(tab);
+        }
+
+        async function loadStatus() {
+            const content = document.getElementById('content');
+            content.innerHTML = '<div class="loading">加载中...</div>';
+            try {
+                const res = await fetch('/api/status');
+                const result = await res.json();
+                if (result.success) {
+                    const data = result.data;
+                    let html = '<div class="card"><h2>📊 系统状态</h2><p style="color:#888;margin-bottom:15px;">版本: ' + data.version + '</p><div class="status-grid">';
+                    for (const app of data.apps) {
+                        html += '<div class="status-item"><div class="status-app">' + getIcon(app.app) + ' ' + app.app + '</div><div class="status-provider">' + (app.current_provider ? '✓ ' + app.current_provider : '未配置') + '</div><div class="status-count">' + app.provider_count + ' 个供应商</div></div>';
+                    }
+                    html += '</div></div>';
+                    content.innerHTML = html;
+                } else {
+                    content.innerHTML = '<div class="card"><p style="color:#ef4444;">加载失败: ' + result.message + '</p></div>';
+                }
+            } catch (e) {
+                content.innerHTML = '<div class="card"><p style="color:#ef4444;">网络错误: ' + e + '</p></div>';
+            }
+        }
+
+        async function loadProviders(app) {
+            const content = document.getElementById('content');
+            content.innerHTML = '<div class="loading">加载中...</div>';
+            try {
+                const res = await fetch('/api/providers/' + app);
+                const result = await res.json();
+                if (result.success) {
+                    const providers = result.data;
+                    let html = '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;"><h2>' + getIcon(app) + ' ' + app.charAt(0).toUpperCase() + app.slice(1) + ' 供应商</h2><button class="btn btn-primary" onclick="openAddModal(\'' + app + '\')">➕ 添加供应商</button></div>';
+                    if (providers.length === 0) {
+                        html += '<div class="empty-state">暂无供应商配置<br><small>点击上方按钮添加</small></div>';
+                    } else {
+                        html += '<div class="provider-list">';
+                        for (const p of providers) {
+                            const cfg = p.settings_config || {};
+                            const model = cfg.mainModel || cfg.model || '';
+                            const baseUrl = cfg.baseUrl || '';
+                            const active = p.is_active ? '<span class="active-badge">当前使用</span>' : '';
+                            html += '<div class="provider-item"><div class="provider-info"><div class="provider-name">' + esc(p.name) + ' ' + active + '</div><div class="provider-details">' + (model ? '模型: ' + esc(model) : '') + (baseUrl ? '<br>URL: ' + esc(baseUrl) : '') + '</div></div><div class="provider-actions">' + (!p.is_active ? '<button class="btn btn-success btn-small" onclick="switchProvider(\'' + app + '\',\'' + esc(p.name) + '\')">切换</button>' : '') + '<button class="btn btn-secondary btn-small" onclick="testProvider(\'' + app + '\',\'' + esc(p.name) + '\')">测试</button><button class="btn btn-secondary btn-small" onclick="openEditModal(\'' + app + '\',' + JSON.stringify(p) + ')">编辑</button><button class="btn btn-danger btn-small" onclick="deleteProvider(\'' + app + '\',\'' + esc(p.name) + '\')">删除</button></div></div>';
+                        }
+                        html += '</div>';
+                    }
+                    html += '</div>';
+                    content.innerHTML = html;
+                }
+            } catch (e) {
+                content.innerHTML = '<div class="card"><p style="color:#ef4444;">网络错误: ' + e + '</p></div>';
+            }
+        }
+
+        function openAddModal(app) {
+            document.getElementById('editMode').value = 'add';
+            document.getElementById('modalTitle').textContent = '添加供应商';
+            document.getElementById('providerApp').value = app;
+            document.getElementById('providerApp').disabled = false;
+            document.getElementById('providerName').value = '';
+            document.getElementById('providerName').disabled = false;
+            document.getElementById('providerKey').value = '';
+            document.getElementById('providerUrl').value = '';
+            document.getElementById('providerModel').value = '';
+            document.getElementById('providerSmallModel').value = '';
+            document.getElementById('addModal').classList.add('show');
+        }
+
+        function openEditModal(app, p) {
+            const cfg = p.settings_config || {};
+            document.getElementById('editMode').value = 'edit';
+            document.getElementById('modalTitle').textContent = '编辑供应商';
+            document.getElementById('providerApp').value = app;
+            document.getElementById('providerApp').disabled = true;
+            document.getElementById('providerName').value = p.name;
+            document.getElementById('providerName').disabled = true;
+            document.getElementById('providerKey').value = '';
+            document.getElementById('providerUrl').value = cfg.baseUrl || '';
+            document.getElementById('providerModel').value = cfg.mainModel || cfg.model || '';
+            document.getElementById('providerSmallModel').value = cfg.smallModel || '';
+            document.getElementById('addModal').classList.add('show');
+        }
+
+        function closeModal() { document.getElementById('addModal').classList.remove('show'); }
+
+        document.getElementById('providerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const mode = document.getElementById('editMode').value;
+            const app = document.getElementById('providerApp').value;
+            const name = document.getElementById('providerName').value;
+            const key = document.getElementById('providerKey').value;
+            const url = document.getElementById('providerUrl').value;
+            const model = document.getElementById('providerModel').value;
+            const smallModel = document.getElementById('providerSmallModel').value;
+
+            const cfg = {};
+            if (key) cfg.apiKey = key;
+            if (url) cfg.baseUrl = url;
+            if (model) cfg.mainModel = model;
+            if (smallModel) cfg.smallModel = smallModel;
+
+            try {
+                let res;
+                if (mode === 'add') {
+                    if (!key) { toast('添加供应商时 API Key 不能为空', 'error'); return; }
+                    res = await fetch('/api/providers/' + app, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, settings_config: cfg })
+                    });
+                } else {
+                    res = await fetch('/api/providers/' + app + '/' + encodeURIComponent(name), {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ settings_config: cfg })
+                    });
+                }
+                const result = await res.json();
+                if (result.success) {
+                    toast(result.data || '操作成功', 'success');
+                    closeModal();
+                    currentTab === 'status' ? loadStatus() : loadProviders(currentTab);
+                } else {
+                    toast(result.message || '操作失败', 'error');
+                }
+            } catch (e) { toast('网络错误: ' + e, 'error'); }
+        });
+
+        async function switchProvider(app, name) {
+            try {
+                const res = await fetch('/api/switch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ app, name })
+                });
+                const result = await res.json();
+                if (result.success) { toast(result.data || '切换成功', 'success'); loadProviders(app); }
+                else toast(result.message || '切换失败', 'error');
+            } catch (e) { toast('网络错误: ' + e, 'error'); }
+        }
+
+        async function testProvider(app, name) {
+            toast('正在测试连接...', 'success');
+            try {
+                const res = await fetch('/api/test/' + app + '/' + encodeURIComponent(name), { method: 'POST' });
+                const result = await res.json();
+                if (result.success && result.data.success) toast('测试成功 (' + result.data.latency_ms + 'ms)', 'success');
+                else toast(result.data?.message || '测试失败', 'error');
+            } catch (e) { toast('网络错误: ' + e, 'error'); }
+        }
+
+        async function deleteProvider(app, name) {
+            if (!confirm('确定要删除供应商 "' + name + '" 吗？')) return;
+            try {
+                const res = await fetch('/api/providers/' + app + '/' + encodeURIComponent(name), { method: 'DELETE' });
+                const result = await res.json();
+                if (result.success) { toast(result.data || '删除成功', 'success'); loadProviders(app); }
+                else toast(result.message || '删除失败', 'error');
+            } catch (e) { toast('网络错误: ' + e, 'error'); }
+        }
+
+        function toast(msg, type) {
+            const old = document.querySelector('.toast');
+            if (old) old.remove();
+            const t = document.createElement('div');
+            t.className = 'toast ' + type;
+            t.textContent = msg;
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 3000);
+        }
+
+        function getIcon(app) {
+            const icons = { claude: '🤖', codex: '💻', gemini: '✨', opencode: '📝', openclaw: '🦀' };
+            return icons[app] || '📦';
+        }
+
+        function esc(s) {
+            if (!s) return '';
+            return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+    </script>
+</body>
+</html>

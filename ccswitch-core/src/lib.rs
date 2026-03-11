@@ -57,6 +57,7 @@ pub mod config;
 pub mod database;
 pub mod error;
 pub mod mcp;
+pub mod openclaw_config;
 pub mod prompt;
 pub mod provider;
 pub mod services;
@@ -65,21 +66,47 @@ pub mod skill;
 pub mod store;
 
 // 公共类型导出
-pub use app_config::{AppType, McpApps};
+pub use app_config::{AppType, McpApps, SkillApps};
 pub use config::{
     get_app_config_dir, get_app_config_path, get_claude_config_dir, get_claude_mcp_path,
-    get_claude_settings_path, get_home_dir, read_json_file, write_json_file, write_text_file,
+    get_claude_settings_path, get_codex_config_dir, get_codex_config_path, get_codex_auth_path,
+    get_gemini_config_dir, get_gemini_settings_path, get_opencode_config_dir,
+    get_openclaw_config_dir, get_openclaw_config_path, get_openclaw_providers_path,
+    get_home_dir, get_database_path, read_json_file, write_json_file, write_text_file,
 };
 pub use database::Database;
 pub use error::AppError;
 pub use mcp::{McpServer, McpStdioConfig};
+pub use openclaw_config::{
+    OpenClawProviderConfig, OpenClawModelEntry, OpenClawDefaultModel,
+    OpenClawAgentsDefaults, OpenClawEnvConfig, OpenClawToolsConfig,
+    OpenClawHealthWarning, OpenClawWriteOutcome, OpenClawModelCatalogEntry,
+    get_openclaw_config_path as get_openclaw_json_path,
+    read_openclaw_config, write_openclaw_config,
+    get_providers as get_openclaw_providers, set_provider as set_openclaw_provider,
+    remove_provider as remove_openclaw_provider, get_typed_providers as get_openclaw_typed_providers,
+    set_typed_provider as set_openclaw_typed_provider,
+    get_default_model as get_openclaw_default_model, set_default_model as set_openclaw_default_model,
+    get_agents_defaults, set_agents_defaults,
+    get_env_config as get_openclaw_env_config, set_env_config as set_openclaw_env_config,
+    get_tools_config as get_openclaw_tools_config, set_tools_config as set_openclaw_tools_config,
+    get_model_catalog as get_openclaw_model_catalog, set_model_catalog as set_openclaw_model_catalog,
+    add_model_to_catalog as add_openclaw_model_to_catalog, remove_model_from_catalog as remove_openclaw_model_from_catalog,
+    scan_openclaw_config_health,
+};
 pub use prompt::Prompt;
 pub use provider::{Provider, ProviderManager, ProviderMeta};
 pub use skill::{Skill, SkillRepo};
 pub use services::{
-    ConfigService, EnvCheckerService, McpService, PromptService, ProxyService, ProviderService,
-    SkillService, SpeedtestService,
+    ConfigService, EnvCheckerService, FailoverService, McpService, PromptService, ProxyService, ProviderService,
+    SkillService, SpeedtestService, StreamCheckService, UsageStatsService, WebDavSyncService,
 };
+pub use services::failover::FailoverQueueItem;
+pub use services::stream_check::{HealthStatus, HealthCheckResult, StreamCheckConfig};
+pub use services::usage_stats::{
+    UsageSummary, DailyStats, ProviderStats, ModelStats, UsageRecord, LimitStatus,
+};
+pub use services::webdav_sync::{WebDavSyncSettings, SyncStatus};
 pub use settings::AppSettings;
 pub use store::AppState;
 

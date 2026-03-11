@@ -69,6 +69,11 @@ fn get_app_env_keywords(app: &AppType) -> Vec<(&'static str, &'static str)> {
             ("OPENAI_API_KEY", "OpenAI API Key"),
             ("ANTHROPIC_API_KEY", "Anthropic API Key"),
         ],
+        AppType::OpenClaw => vec![
+            // OpenClaw 使用的环境变量（基于其支持的 API）
+            ("OPENAI_API_KEY", "OpenAI API Key"),
+            ("ANTHROPIC_API_KEY", "Anthropic API Key"),
+        ],
     }
 }
 

@@ -167,8 +167,8 @@ async fn test_provider_api(
             let url = base_url.unwrap_or("https://generativelanguage.googleapis.com");
             test_gemini_api(api_key, url, timeout).await?;
         }
-        AppType::OpenCode => {
-            bail!("OpenCode 不支持 API 测试");
+        AppType::OpenCode | AppType::OpenClaw => {
+            bail!("该应用不支持 API 测试");
         }
     }
 

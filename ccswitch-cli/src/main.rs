@@ -24,6 +24,7 @@ mod commands;
 mod interactive;
 mod output;
 mod tui;
+mod web;
 
 use anyhow::Result;
 use clap::Parser;

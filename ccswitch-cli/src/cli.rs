@@ -83,6 +83,8 @@ pub enum AppTypeArg {
     Gemini,
     /// OpenCode CLI
     Opencode,
+    /// OpenClaw CLI
+    Openclaw,
     /// 所有应用
     All,
 }
@@ -95,6 +97,7 @@ impl AppTypeArg {
             Self::Codex => vec![ccswitch_core::AppType::Codex],
             Self::Gemini => vec![ccswitch_core::AppType::Gemini],
             Self::Opencode => vec![ccswitch_core::AppType::OpenCode],
+            Self::Openclaw => vec![ccswitch_core::AppType::OpenClaw],
             Self::All => ccswitch_core::AppType::all().to_vec(),
         }
     }
@@ -414,6 +417,15 @@ pub enum Commands {
         action: SkillAction,
     },
 
+    /// 🔧 OpenClaw 配置管理
+    #[command(
+        long_about = "管理 OpenClaw 特有的配置选项。\n\nOpenClaw 使用累加模式，支持多个供应商同时存在。\n\n示例:\n  cc-switch openclaw list                   列出所有供应商\n  cc-switch openclaw add my-api --base-url https://api.example.com --api-key sk-xxx\n  cc-switch openclaw default-model --provider my-api --model gpt-4\n  cc-switch openclaw health --fix           健康检查并修复"
+    )]
+    Openclaw {
+        #[command(subcommand)]
+        action: OpenclawAction,
+    },
+
     /// 🔄 检测更新/自动更新
     #[command(
         name = "self-update",
@@ -449,6 +461,57 @@ pub enum Commands {
     Batch {
         #[command(subcommand)]
         action: BatchAction
+    },
+
+    /// 🔥 故障转移队列管理
+    #[command(
+        long_about = "管理供应商的故障转移队列。\n\n当主供应商失败时，自动切换到备用供应商。\n\n示例:\n  cc-switch failover list --app claude    查看 Claude 故障转移队列\n  cc-switch failover add backup-api --app claude  添加备用供应商\n  cc-switch failover clear --app claude  清空队列"
+    )]
+    Failover {
+        #[command(subcommand)]
+        action: FailoverAction,
+    },
+
+    /// 📊 使用量统计
+    #[command(
+        long_about = "查看 API 使用量统计和限额管理。\n\n示例:\n  cc-switch usage summary           查看使用量汇总\n  cc-switch usage trends --days 7   查看最近7天趋势\n  cc-switch usage provider          查看供应商统计\n  cc-switch usage limit my-api --daily 10  设置日限额"
+    )]
+    Usage {
+        #[command(subcommand)]
+        action: UsageAction,
+    },
+
+    /// ☁️ WebDAV 云端同步
+    #[command(
+        long_about = "管理配置的云端同步。\n\n通过 WebDAV 同步配置到云端，实现多设备配置同步。\n\n示例:\n  cc-switch webdav config --url https://dav.example.com --username user --password pass\n  cc-switch webdav test             测试连接\n  cc-switch webdav upload           上传配置\n  cc-switch webdav download         下载配置"
+    )]
+    Webdav {
+        #[command(subcommand)]
+        action: WebdavAction,
+    },
+
+    /// 🌐 启动 Web 控制器
+    #[command(
+        long_about = r#"启动 Web UI 服务，通过浏览器管理配置。
+
+⚠️  安全警告:
+  • 服务绑定所有网络接口 (0.0.0.0)，可从公网访问
+  • 配置完成后请及时关闭 (Ctrl+C)
+  • 建议在可信网络环境中使用
+
+示例:
+  cc-switch web                  启动服务 (默认端口 8000)
+  cc-switch web --port 3000      使用自定义端口
+  cc-switch web --host 127.0.0.1 仅本地访问"#
+    )]
+    Web {
+        /// 监听端口
+        #[arg(short, long, default_value = "8000")]
+        port: u16,
+
+        /// 绑定主机地址 (默认 0.0.0.0，所有接口)
+        #[arg(long, default_value = "0.0.0.0")]
+        host: String,
     },
 
     /// ℹ️ 显示版本信息
@@ -928,11 +991,314 @@ pub enum SkillAction {
 pub enum SelfUpdateAction {
     /// 🔍 检测是否有新版本
     Check,
-    
+
     /// ⬆️ 执行更新
     Run {
         /// 强制重新安装
         #[arg(long, short = 'f')]
         force: bool,
     },
+}
+
+/// OpenClaw 配置操作子命令
+#[derive(Subcommand, Debug)]
+pub enum OpenclawAction {
+    /// 📋 列出 OpenClaw 供应商
+    #[command(visible_alias = "ls")]
+    List {
+        /// 显示详细配置
+        #[arg(short, long)]
+        detail: bool,
+    },
+
+    /// ➕ 添加 OpenClaw 供应商
+    Add {
+        /// 供应商 ID
+        id: String,
+
+        /// Base URL
+        #[arg(long)]
+        base_url: Option<String>,
+
+        /// API Key
+        #[arg(long)]
+        api_key: Option<String>,
+
+        /// API 类型 (openai/anthropic 等)
+        #[arg(long)]
+        api: Option<String>,
+
+        /// 模型列表 (格式: id 或 id:name)
+        #[arg(long, num_args = 1..)]
+        models: Vec<String>,
+    },
+
+    /// ✏️ 更新 OpenClaw 供应商
+    Update {
+        /// 供应商 ID
+        id: String,
+
+        /// 新 Base URL
+        #[arg(long)]
+        base_url: Option<String>,
+
+        /// 新 API Key
+        #[arg(long)]
+        api_key: Option<String>,
+
+        /// 新 API 类型
+        #[arg(long)]
+        api: Option<String>,
+
+        /// 添加模型
+        #[arg(long, num_args = 1..)]
+        add_models: Vec<String>,
+
+        /// 移除模型
+        #[arg(long, num_args = 1..)]
+        remove_models: Vec<String>,
+    },
+
+    /// ❌ 删除 OpenClaw 供应商
+    #[command(visible_alias = "rm")]
+    Remove {
+        /// 供应商 ID
+        id: String,
+
+        /// 跳过确认
+        #[arg(short = 'y', long)]
+        yes: bool,
+    },
+
+    /// 🔍 显示供应商详情
+    Show {
+        /// 供应商 ID
+        id: String,
+    },
+
+    /// 🔧 默认模型配置
+    DefaultModel {
+        /// 主模型
+        #[arg(long)]
+        primary: Option<String>,
+
+        /// 备选模型
+        #[arg(long, num_args = 1..)]
+        fallbacks: Vec<String>,
+    },
+
+    /// 🤖 Agents 默认配置
+    Agents {
+        /// 默认模型
+        #[arg(long)]
+        model: Option<String>,
+
+        /// 超时时间（秒）
+        #[arg(long)]
+        timeout: Option<u64>,
+    },
+
+    /// 🔐 环境变量配置
+    Env {
+        /// 环境变量名
+        #[arg(long)]
+        key: Option<String>,
+
+        /// 环境变量值
+        #[arg(long)]
+        value: Option<String>,
+
+        /// 删除环境变量
+        #[arg(long)]
+        remove: Option<String>,
+    },
+
+    /// 🛠️ 工具配置
+    Tools {
+        /// 工具配置模板
+        #[arg(long)]
+        profile: Option<String>,
+
+        /// 添加允许的工具
+        #[arg(long, num_args = 1..)]
+        add_allow: Vec<String>,
+
+        /// 移除允许的工具
+        #[arg(long, num_args = 1..)]
+        remove_allow: Vec<String>,
+
+        /// 添加拒绝的工具
+        #[arg(long, num_args = 1..)]
+        add_deny: Vec<String>,
+
+        /// 移除拒绝的工具
+        #[arg(long, num_args = 1..)]
+        remove_deny: Vec<String>,
+    },
+
+    /// 📚 模型目录管理
+    Catalog {
+        /// 添加模型 (格式: model-id 或 model-id:alias)
+        #[arg(long)]
+        add: Option<String>,
+
+        /// 移除模型
+        #[arg(long)]
+        remove: Option<String>,
+    },
+
+    /// 🏥 健康检查
+    Health {
+        /// 自动修复问题
+        #[arg(long)]
+        fix: bool,
+    },
+
+    /// 📁 显示配置路径
+    Path,
+
+    /// 📤 导出配置
+    Export,
+
+    /// 📥 导入配置
+    Import {
+        /// 配置文件路径
+        file: String,
+    },
+}
+
+/// 故障转移操作子命令
+#[derive(Subcommand, Debug)]
+pub enum FailoverAction {
+    /// 📋 列出故障转移队列
+    #[command(visible_alias = "ls")]
+    List {
+        /// 应用类型
+        #[arg(short, long, value_enum, default_value = "claude")]
+        app: AppTypeArg,
+    },
+
+    /// ➕ 添加供应商到故障转移队列
+    Add {
+        /// 供应商 ID
+        provider_id: String,
+
+        /// 应用类型
+        #[arg(short, long, value_enum, default_value = "claude")]
+        app: AppTypeArg,
+    },
+
+    /// ❌ 从故障转移队列移除供应商
+    #[command(visible_alias = "rm")]
+    Remove {
+        /// 供应商 ID
+        provider_id: String,
+
+        /// 应用类型
+        #[arg(short, long, value_enum, default_value = "claude")]
+        app: AppTypeArg,
+    },
+
+    /// 🗑️ 清空故障转移队列
+    Clear {
+        /// 应用类型
+        #[arg(short, long, value_enum, default_value = "claude")]
+        app: AppTypeArg,
+    },
+}
+
+/// 使用量统计操作子命令
+#[derive(Subcommand, Debug)]
+pub enum UsageAction {
+    /// 📊 显示使用量汇总
+    Summary {
+        /// 指定天数范围
+        #[arg(long, short = 'd')]
+        days: Option<u64>,
+    },
+
+    /// 📈 显示每日趋势
+    Trends {
+        /// 显示天数
+        #[arg(long, short = 'd', default_value = "7")]
+        days: u64,
+    },
+
+    /// 🏢 显示供应商统计
+    #[command(visible_alias = "providers")]
+    Provider,
+
+    /// 🔍 检查限额状态
+    Limit {
+        /// 供应商 ID
+        provider_id: String,
+
+        /// 应用类型
+        #[arg(short, long, value_enum, default_value = "claude")]
+        app: AppTypeArg,
+    },
+
+    /// ⚙️ 设置使用限额
+    SetLimit {
+        /// 供应商 ID
+        provider_id: String,
+
+        /// 日限额（美元）
+        #[arg(long)]
+        daily: Option<f64>,
+
+        /// 月限额（美元）
+        #[arg(long)]
+        monthly: Option<f64>,
+    },
+}
+
+/// WebDAV 同步操作子命令
+#[derive(Subcommand, Debug)]
+pub enum WebdavAction {
+    /// 📋 显示 WebDAV 配置
+    #[command(visible_alias = "ls")]
+    Config,
+
+    /// ⚙️ 配置 WebDAV 连接
+    Setup {
+        /// WebDAV URL
+        #[arg(long)]
+        url: String,
+
+        /// 用户名
+        #[arg(long)]
+        username: String,
+
+        /// 密码
+        #[arg(long)]
+        password: String,
+
+        /// 远程目录
+        #[arg(long, default_value = "/cc-switch")]
+        remote_root: Option<String>,
+    },
+
+    /// 🔄 启用/禁用同步
+    Toggle {
+        /// 启用同步
+        #[arg(long, conflicts_with = "disable")]
+        enable: bool,
+
+        /// 禁用同步
+        #[arg(long, conflicts_with = "enable")]
+        disable: bool,
+    },
+
+    /// 🧪 测试 WebDAV 连接
+    Test,
+
+    /// 📤 上传配置到 WebDAV
+    Upload,
+
+    /// 📥 从 WebDAV 下载配置
+    Download,
+
+    /// ℹ️ 显示远程配置信息
+    Info,
 }

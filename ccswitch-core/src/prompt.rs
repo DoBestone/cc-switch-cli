@@ -56,7 +56,8 @@ impl Prompt {
 /// 获取应用的 Prompt 文件路径
 pub fn get_prompt_path(app: &AppType) -> std::path::PathBuf {
     use crate::config::{
-        get_claude_config_dir, get_codex_config_dir, get_gemini_config_dir, get_opencode_config_dir,
+        get_claude_config_dir, get_codex_config_dir, get_gemini_config_dir, get_openclaw_config_dir,
+        get_opencode_config_dir,
     };
 
     match app {
@@ -64,6 +65,7 @@ pub fn get_prompt_path(app: &AppType) -> std::path::PathBuf {
         AppType::Codex => get_codex_config_dir().join("AGENTS.md"),
         AppType::Gemini => get_gemini_config_dir().join("GEMINI.md"),
         AppType::OpenCode => get_opencode_config_dir().join("AGENTS.md"),
+        AppType::OpenClaw => get_openclaw_config_dir().join("CLAW.md"),
     }
 }
 
@@ -74,6 +76,7 @@ pub fn get_prompt_filename(app: &AppType) -> &'static str {
         AppType::Codex => "AGENTS.md",
         AppType::Gemini => "GEMINI.md",
         AppType::OpenCode => "AGENTS.md",
+        AppType::OpenClaw => "CLAW.md",
     }
 }
 

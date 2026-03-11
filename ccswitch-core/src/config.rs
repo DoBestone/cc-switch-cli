@@ -118,6 +118,26 @@ pub fn get_opencode_config_dir() -> PathBuf {
     get_home_dir().join(".opencode")
 }
 
+/// 获取 OpenClaw 配置目录路径
+///
+/// 默认: `~/.openclaw`
+pub fn get_openclaw_config_dir() -> PathBuf {
+    if let Ok(dir) = std::env::var("CCSWITCH_OPENCLAW_CONFIG_DIR") {
+        return PathBuf::from(dir);
+    }
+    get_home_dir().join(".openclaw")
+}
+
+/// 获取 OpenClaw 配置文件路径
+pub fn get_openclaw_config_path() -> PathBuf {
+    get_openclaw_config_dir().join("opencode.json")
+}
+
+/// 获取 OpenClaw providers 配置文件路径
+pub fn get_openclaw_providers_path() -> PathBuf {
+    get_openclaw_config_dir().join("providers.json5")
+}
+
 /// 获取应用配置目录路径
 ///
 /// 默认: `~/.cc-switch`
