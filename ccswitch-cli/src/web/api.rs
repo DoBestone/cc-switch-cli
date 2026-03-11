@@ -567,7 +567,7 @@ pub async fn add_mcp(Path(_app): Path<String>, Json(req): Json<AddMcpRequest>) -
     }
 }
 
-pub async fn delete_mcp(Path((_app, id)): Path<(String, String)>) -> impl IntoResponse {
+pub async fn delete_mcp(Path(id): Path<String>) -> impl IntoResponse {
     let state = match AppState::init() {
         Ok(s) => s,
         Err(e) => {
@@ -583,11 +583,12 @@ pub async fn delete_mcp(Path((_app, id)): Path<(String, String)>) -> impl IntoRe
 
 #[derive(Deserialize)]
 pub struct ToggleMcpRequest {
+    pub app: String,
     pub enable: bool,
 }
 
-pub async fn toggle_mcp(Path((app, id)): Path<(String, String)>, Json(req): Json<ToggleMcpRequest>) -> impl IntoResponse {
-    let app_type = match parse_app_type(&app) {
+pub async fn toggle_mcp(Path(id): Path<String>, Json(req): Json<ToggleMcpRequest>) -> impl IntoResponse {
+    let app_type = match parse_app_type(&req.app) {
         Some(a) => a,
         None => {
             return (StatusCode::BAD_REQUEST, Json(ApiResponse::<String>::error("无效的应用类型")));
