@@ -1227,15 +1227,22 @@ fn interactive_web(_ctx: &OutputContext) -> Result<()> {
     let host = read_optional("绑定地址", Some("0.0.0.0"))?;
     let host = host.unwrap_or_else(|| "0.0.0.0".to_string());
 
+    let user = read_optional("登录用户名", Some("admin"))?;
+    let user = user.unwrap_or_else(|| "admin".to_string());
+
+    let pass = read_optional("登录密码", Some("admin"))?;
+    let pass = pass.unwrap_or_else(|| "admin".to_string());
+
     println!();
     println!("{}", format!("正在启动 Web 服务器，访问地址: http://{}:{}", host, port).green());
+    println!("{}", format!("登录账号: {}", user).cyan());
     println!("{}", "按 Ctrl+C 停止服务".yellow());
     println!();
 
     // 启动 Web 服务器
     let rt = tokio::runtime::Runtime::new().unwrap();
     rt.block_on(async {
-        let app = crate::web::create_router();
+        let app = crate::web::create_router(&user, &pass);
         let addr: std::net::SocketAddr = format!("{}:{}", host, port)
             .parse()
             .map_err(|e| anyhow::anyhow!("无效的地址: {}", e))?;
@@ -1244,9 +1251,11 @@ fn interactive_web(_ctx: &OutputContext) -> Result<()> {
         println!("{}", "║           🌐 CC-Switch Web 控制器已启动                      ║".cyan());
         println!("{}", "╠══════════════════════════════════════════════════════════════╣".cyan());
         println!("║  访问地址: http://{}:{}                                   ║", host, port);
+        println!("║  登录账号: {}                                               ║", user);
         println!("{}", "║                                                              ║".cyan());
         println!("{}", "║  ⚠️  安全提示:                                               ║".cyan());
         println!("{}", "║  • 此服务绑定所有网络接口，可从公网访问                       ║".cyan());
+        println!("{}", "║  • 已启用身份验证，请使用设置的账号密码登录                   ║".cyan());
         println!("{}", "║  • 配置完成后请及时关闭 (Ctrl+C)                             ║".cyan());
         println!("{}", "║  • 建议在防火墙后使用或使用临时会话                          ║".cyan());
         println!("{}", "╚══════════════════════════════════════════════════════════════╝".cyan());

@@ -502,7 +502,8 @@ pub enum Commands {
 示例:
   cc-switch web                  启动服务 (默认端口 8000)
   cc-switch web --port 3000      使用自定义端口
-  cc-switch web --host 127.0.0.1 仅本地访问"#
+  cc-switch web --host 127.0.0.1 仅本地访问
+  cc-switch web --user admin --pass secret123  设置登录账号密码"#
     )]
     Web {
         /// 监听端口
@@ -512,6 +513,14 @@ pub enum Commands {
         /// 绑定主机地址 (默认 0.0.0.0，所有接口)
         #[arg(long, default_value = "0.0.0.0")]
         host: String,
+
+        /// 登录用户名
+        #[arg(short = 'U', long, default_value = "admin")]
+        user: String,
+
+        /// 登录密码
+        #[arg(short = 'P', long, default_value = "admin")]
+        pass: String,
     },
 
     /// ℹ️ 显示版本信息

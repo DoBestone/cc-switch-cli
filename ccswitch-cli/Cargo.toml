@@ -1,6 +1,6 @@
 [package]
 name = "ccswitch-cli"
-version = "1.2.1"
+version = "1.2.2"
 edition = "2021"
 authors = ["CC-Switch Contributors"]
 description = "CLI tool for managing Claude Code, Codex, and Gemini CLI configurations"
@@ -53,6 +53,11 @@ crossterm = "0.28"
 axum = "0.7"
 tower = "0.5"
 tower-http = { version = "0.6", features = ["fs", "cors"] }
+
+# Authentication
+jsonwebtoken = "9"
+bcrypt = "0.16"
+once_cell = "1.21"
 
 [dev-dependencies]
 assert_cmd = "2"

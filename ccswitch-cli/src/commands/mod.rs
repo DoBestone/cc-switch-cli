@@ -83,7 +83,7 @@ pub fn execute(cli: Cli) -> Result<()> {
         Commands::Failover { action } => execute_failover(&ctx, action),
         Commands::Usage { action } => execute_usage(&ctx, action),
         Commands::Webdav { action } => execute_webdav(&ctx, action),
-        Commands::Web { port, host } => execute_web(&ctx, port, &host),
+        Commands::Web { port, host, user, pass } => execute_web(&ctx, port, &host, &user, &pass),
         Commands::Version => {
             println!("cc-switch {}", ccswitch_core::VERSION);
             Ok(())
@@ -433,11 +433,11 @@ fn execute_webdav(ctx: &OutputContext, action: WebdavAction) -> Result<()> {
 }
 
 /// 执行 Web 控制器命令
-fn execute_web(_ctx: &OutputContext, port: u16, host: &str) -> Result<()> {
+fn execute_web(_ctx: &OutputContext, port: u16, host: &str, user: &str, pass: &str) -> Result<()> {
     let rt = tokio::runtime::Runtime::new().unwrap();
     rt.block_on(async {
         // 创建路由
-        let app = crate::web::create_router();
+        let app = crate::web::create_router(user, pass);
 
         let addr: std::net::SocketAddr = format!("{}:{}", host, port)
             .parse()
@@ -448,9 +448,11 @@ fn execute_web(_ctx: &OutputContext, port: u16, host: &str) -> Result<()> {
         println!("║           🌐 CC-Switch Web 控制器已启动                      ║");
         println!("╠══════════════════════════════════════════════════════════════╣");
         println!("║  访问地址: http://{}:{}                                   ║", host, port);
+        println!("║  登录账号: {}                                               ║", user);
         println!("║                                                              ║");
         println!("║  ⚠️  安全提示:                                               ║");
         println!("║  • 此服务绑定所有网络接口，可从公网访问                       ║");
+        println!("║  • 已启用身份验证，请使用设置的账号密码登录                   ║");
         println!("║  • 配置完成后请及时关闭 (Ctrl+C)                             ║");
         println!("║  • 建议在防火墙后使用或使用临时会话                          ║");
         println!("╚══════════════════════════════════════════════════════════════╝");

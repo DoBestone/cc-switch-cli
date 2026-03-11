@@ -129,10 +129,72 @@
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         .loading { text-align: center; padding: 40px; color: #888; }
         .empty-state { text-align: center; padding: 40px; color: #666; }
+
+        /* 登录页面样式 */
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .login-box {
+            background: #2a2a4a;
+            border-radius: 16px;
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        .login-box h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            background: linear-gradient(90deg, #00d4ff, #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .login-box .form-group input {
+            font-size: 16px;
+        }
+        .login-box .btn {
+            width: 100%;
+            padding: 14px;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        .login-error {
+            background: #ef444420;
+            border: 1px solid #ef4444;
+            color: #ef4444;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        .main-content { display: none; }
     </style>
 </head>
 <body>
-    <div class="container">
+    <!-- 登录页面 -->
+    <div id="loginPage" class="login-container">
+        <div class="login-box">
+            <h2>🔄 CC-Switch 登录</h2>
+            <div id="loginError" class="login-error"></div>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>用户名</label>
+                    <input type="text" id="loginUsername" placeholder="请输入用户名" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label>密码</label>
+                    <input type="password" id="loginPassword" placeholder="请输入密码" required autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn btn-primary">登 录</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 主内容 -->
+    <div id="mainContent" class="container main-content">
         <header>
             <h1>🔄 CC-Switch Web 控制器</h1>
             <p style="color: #888; margin-top: 10px;">管理 Claude / Codex / Gemini / OpenClaw 供应商配置</p>
@@ -151,6 +213,7 @@
             <button class="tab" onclick="showTab('codex')">💻 Codex</button>
             <button class="tab" onclick="showTab('gemini')">✨ Gemini</button>
             <button class="tab" onclick="showTab('openclaw')">🦀 OpenClaw</button>
+            <button class="tab" onclick="logout()" style="background: #4b5563;">🚪 退出登录</button>
         </div>
 
         <div id="content"><div class="loading">加载中...</div></div>
@@ -204,7 +267,78 @@
 
     <script>
         let currentTab = 'status';
-        document.addEventListener('DOMContentLoaded', () => loadStatus());
+        let authToken = localStorage.getItem('authToken');
+
+        // 页面加载时检查登录状态
+        document.addEventListener('DOMContentLoaded', () => {
+            if (authToken) {
+                // 验证token是否有效
+                fetchWithAuth('/api/status')
+                    .then(res => res.json())
+                    .then(result => {
+                        if (result.success) {
+                            showMainContent();
+                            loadStatus();
+                        } else {
+                            logout();
+                        }
+                    })
+                    .catch(() => logout());
+            }
+        });
+
+        // 登录表单处理
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const result = await res.json();
+
+                if (result.success && result.token) {
+                    authToken = result.token;
+                    localStorage.setItem('authToken', authToken);
+                    showMainContent();
+                    loadStatus();
+                } else {
+                    document.getElementById('loginError').textContent = result.message || '登录失败';
+                    document.getElementById('loginError').style.display = 'block';
+                }
+            } catch (e) {
+                document.getElementById('loginError').textContent = '网络错误: ' + e;
+                document.getElementById('loginError').style.display = 'block';
+            }
+        });
+
+        // 带认证的fetch
+        function fetchWithAuth(url, options = {}) {
+            const headers = options.headers || {};
+            headers['Authorization'] = 'Bearer ' + authToken;
+            options.headers = headers;
+            return fetch(url, options);
+        }
+
+        // 显示主内容
+        function showMainContent() {
+            document.getElementById('loginPage').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'block';
+        }
+
+        // 退出登录
+        function logout() {
+            authToken = null;
+            localStorage.removeItem('authToken');
+            document.getElementById('mainContent').style.display = 'none';
+            document.getElementById('loginPage').style.display = 'flex';
+            document.getElementById('loginPassword').value = '';
+            document.getElementById('loginError').style.display = 'none';
+        }
 
         function showTab(tab) {
             currentTab = tab;
@@ -217,7 +351,7 @@
             const content = document.getElementById('content');
             content.innerHTML = '<div class="loading">加载中...</div>';
             try {
-                const res = await fetch('/api/status');
+                const res = await fetchWithAuth('/api/status');
                 const result = await res.json();
                 if (result.success) {
                     const data = result.data;
@@ -228,7 +362,11 @@
                     html += '</div></div>';
                     content.innerHTML = html;
                 } else {
-                    content.innerHTML = '<div class="card"><p style="color:#ef4444;">加载失败: ' + result.message + '</p></div>';
+                    if (result.message && result.message.includes('认证')) {
+                        logout();
+                    } else {
+                        content.innerHTML = '<div class="card"><p style="color:#ef4444;">加载失败: ' + result.message + '</p></div>';
+                    }
                 }
             } catch (e) {
                 content.innerHTML = '<div class="card"><p style="color:#ef4444;">网络错误: ' + e + '</p></div>';
@@ -239,7 +377,7 @@
             const content = document.getElementById('content');
             content.innerHTML = '<div class="loading">加载中...</div>';
             try {
-                const res = await fetch('/api/providers/' + app);
+                const res = await fetchWithAuth('/api/providers/app/' + app);
                 const result = await res.json();
                 if (result.success) {
                     const providers = result.data;
@@ -316,13 +454,13 @@
                 let res;
                 if (mode === 'add') {
                     if (!key) { toast('添加供应商时 API Key 不能为空', 'error'); return; }
-                    res = await fetch('/api/providers/' + app, {
+                    res = await fetchWithAuth('/api/providers/app/' + app, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ name, settings_config: cfg })
                     });
                 } else {
-                    res = await fetch('/api/providers/' + app + '/' + encodeURIComponent(name), {
+                    res = await fetchWithAuth('/api/providers/app/' + app + '/' + encodeURIComponent(name), {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ settings_config: cfg })
@@ -341,7 +479,7 @@
 
         async function switchProvider(app, name) {
             try {
-                const res = await fetch('/api/switch', {
+                const res = await fetchWithAuth('/api/switch', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ app, name })
@@ -355,7 +493,7 @@
         async function testProvider(app, name) {
             toast('正在测试连接...', 'success');
             try {
-                const res = await fetch('/api/test/' + app + '/' + encodeURIComponent(name), { method: 'POST' });
+                const res = await fetchWithAuth('/api/test/' + app + '/' + encodeURIComponent(name), { method: 'POST' });
                 const result = await res.json();
                 if (result.success && result.data.success) toast('测试成功 (' + result.data.latency_ms + 'ms)', 'success');
                 else toast(result.data?.message || '测试失败', 'error');
@@ -365,7 +503,7 @@
         async function deleteProvider(app, name) {
             if (!confirm('确定要删除供应商 "' + name + '" 吗？')) return;
             try {
-                const res = await fetch('/api/providers/' + app + '/' + encodeURIComponent(name), { method: 'DELETE' });
+                const res = await fetchWithAuth('/api/providers/app/' + app + '/' + encodeURIComponent(name), { method: 'DELETE' });
                 const result = await res.json();
                 if (result.success) { toast(result.data || '删除成功', 'success'); loadProviders(app); }
                 else toast(result.message || '删除失败', 'error');

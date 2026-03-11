@@ -3,19 +3,32 @@
 //! 提供 Web UI 和 REST API 用于配置管理。
 
 pub mod api;
+pub mod auth;
 pub mod frontend;
 
 use axum::{
+    middleware,
     routing::{get, post, put, delete},
     Router,
 };
 use tower_http::cors::{Any, CorsLayer};
 
+use crate::web::auth::AuthState;
+
 /// 创建 Web 服务器路由
-pub fn create_router() -> Router {
-    Router::new()
-        // 静态页面
+pub fn create_router(username: &str, password: &str) -> Router {
+    let auth_state = AuthState {
+        username: username.to_string(),
+        password: password.to_string(),
+    };
+
+    // 公开路由（不需要认证）
+    let public_routes = Router::new()
         .route("/", get(frontend::index))
+        .route("/api/login", post(auth::login));
+
+    // 受保护的路由（需要认证）
+    let protected_routes = Router::new()
         // 状态和供应商 API
         .route("/api/status", get(api::get_status))
         .route("/api/providers", get(api::list_providers))
@@ -73,6 +86,14 @@ pub fn create_router() -> Router {
         .route("/api/env/list", get(api::env_list))
         // 配置路径 API
         .route("/api/config/paths", get(api::config_paths))
+        // 添加认证中间件
+        .layer(middleware::from_fn_with_state(auth_state.clone(), auth::auth_middleware));
+
+    // 合并路由
+    Router::new()
+        .merge(public_routes)
+        .merge(protected_routes)
+        .with_state(auth_state)
         // CORS 支持
         .layer(CorsLayer::new().allow_origin(Any).allow_methods(Any).allow_headers(Any))
 }
