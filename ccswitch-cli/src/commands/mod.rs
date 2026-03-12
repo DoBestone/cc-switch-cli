@@ -19,6 +19,9 @@ pub mod update;
 pub mod usage;
 pub mod webdav;
 
+// Re-export update types for use in main
+pub use update::{UpdateType, VersionInfo, check_on_startup};
+
 use anyhow::Result;
 
 use crate::cli::{Cli, Commands, BatchAction, EnvAction, FailoverAction, McpAction, OpenclawAction, PromptAction, ProxyAction, SkillAction, SelfUpdateAction, UsageAction, WebdavAction};

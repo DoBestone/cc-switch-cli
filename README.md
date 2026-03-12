@@ -68,7 +68,7 @@ curl -fsSL https://raw.githubusercontent.com/DoBestone/cc-switch-cli/main/instal
 CC_SWITCH_FORCE=1 bash <(curl -fsSL https://raw.githubusercontent.com/DoBestone/cc-switch-cli/main/update.sh)
 
 # 指定安装特定版本
-CC_SWITCH_VERSION=1.0.2 bash <(curl -fsSL https://raw.githubusercontent.com/DoBestone/cc-switch-cli/main/update.sh)
+CC_SWITCH_VERSION=1.2.2 bash <(curl -fsSL https://raw.githubusercontent.com/DoBestone/cc-switch-cli/main/update.sh)
 
 # 跳过 SHA256 校验（不推荐，仅在网络问题时使用）
 CC_SWITCH_NO_VERIFY=1 bash <(curl -fsSL https://raw.githubusercontent.com/DoBestone/cc-switch-cli/main/update.sh)

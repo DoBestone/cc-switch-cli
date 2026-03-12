@@ -139,6 +139,9 @@ get_latest_version() {
 }
 
 # 比较版本号
+# 返回值:
+#   0 - 需要更新
+#   1 - 不需要更新
 compare_versions() {
     local v1="$1"
     local v2="$2"
@@ -161,6 +164,10 @@ compare_versions() {
         local p1="${V1_PARTS[$i]:-0}"
         local p2="${V2_PARTS[$i]:-0}"
 
+        # 移除预发布后缀（如 -beta, -rc.1）
+        p1="${p1%%-*}"
+        p2="${p2%%-*}"
+
         if [ "$p2" -gt "$p1" ] 2>/dev/null; then
             return 0  # 需要更新
         elif [ "$p2" -lt "$p1" ] 2>/dev/null; then
@@ -169,6 +176,64 @@ compare_versions() {
     done
 
     return 1  # 版本相同
+}
+
+# 获取版本更新类型
+# 输出: major, minor, patch, none
+get_update_type() {
+    local v1="$1"
+    local v2="$2"
+
+    # 移除 v 前缀
+    v1="${v1#v}"
+    v2="${v2#v}"
+
+    local IFS='.'
+    read -ra V1_PARTS <<< "$v1"
+    read -ra V2_PARTS <<< "$v2"
+
+    local major1="${V1_PARTS[0]:-0}"
+    local major2="${V2_PARTS[0]:-0}"
+    local minor1="${V1_PARTS[1]:-0}"
+    local minor2="${V2_PARTS[1]:-0}"
+    local patch1="${V1_PARTS[2]:-0}"
+    local patch2="${V2_PARTS[2]:-0}"
+
+    # 移除预发布后缀
+    major1="${major1%%-*}"
+    major2="${major2%%-*}"
+    minor1="${minor1%%-*}"
+    minor2="${minor2%%-*}"
+    patch1="${patch1%%-*}"
+    patch2="${patch2%%-*}"
+
+    if [ "$major2" -gt "$major1" ] 2>/dev/null; then
+        echo "major"
+    elif [ "$minor2" -gt "$minor1" ] 2>/dev/null; then
+        echo "minor"
+    elif [ "$patch2" -gt "$patch1" ] 2>/dev/null; then
+        echo "patch"
+    else
+        echo "none"
+    fi
+}
+
+# 显示更新类型提示
+show_update_type_message() {
+    local update_type="$1"
+
+    case "$update_type" in
+        major)
+            echo -e "${RED}🔴 大版本更新（建议立即更新）${NC}"
+            echo -e "${YELLOW}⚠️  大版本更新可能包含不兼容变更${NC}"
+            ;;
+        minor)
+            echo -e "${YELLOW}🟡 中版本更新（推荐更新）${NC}"
+            ;;
+        patch)
+            echo -e "${GREEN}🟢 小版本更新（可选更新）${NC}"
+            ;;
+    esac
 }
 
 # 验证 SHA256 校验和
@@ -537,10 +602,30 @@ main() {
     echo ""
     if [ -n "$CURRENT_VERSION" ] && [ "$CURRENT_VERSION" != "unknown" ]; then
         info "准备更新: v$CURRENT_VERSION → v$LATEST_VERSION"
+
+        # 显示更新类型
+        UPDATE_TYPE=$(get_update_type "$CURRENT_VERSION" "$LATEST_VERSION")
+        if [ "$UPDATE_TYPE" != "none" ]; then
+            echo ""
+            show_update_type_message "$UPDATE_TYPE"
+        fi
     else
         info "准备安装: v$LATEST_VERSION"
     fi
     echo ""
+
+    # 大版本更新确认
+    if [ "$UPDATE_TYPE" = "major" ] && [ "$FORCE" != "1" ]; then
+        echo -e "${YELLOW}⚠️  检测到大版本更新！${NC}"
+        echo -e "${YELLOW}   大版本更新可能包含不兼容变更。${NC}"
+        echo ""
+        read -p "确认继续更新？(y/N): " confirm
+        if [ "$confirm" != "y" ] && [ "$confirm" != "Y" ]; then
+            info "已取消更新"
+            exit 0
+        fi
+        echo ""
+    fi
 
     # 执行更新
     download_and_install "$LATEST_VERSION"

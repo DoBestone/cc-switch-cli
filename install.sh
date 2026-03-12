@@ -17,6 +17,7 @@ VERSION="${CC_SWITCH_VERSION:-latest}"
 REPO="DoBestone/cc-switch-cli"
 INSTALL_DIR="${CC_SWITCH_INSTALL_DIR:-/usr/local/bin}"
 BINARY_NAME="cc-switch"
+NO_VERIFY="${CC_SWITCH_NO_VERIFY:-0}"
 
 # 打印带颜色的消息
 info() { echo -e "${BLUE}ℹ${NC} $1"; }
@@ -28,23 +29,79 @@ error() { echo -e "${RED}✗${NC} $1"; exit 1; }
 detect_platform() {
     OS="$(uname -s)"
     ARCH="$(uname -m)"
-    
+
     case "$OS" in
         Linux*)   OS_TYPE="linux" ;;
         Darwin*)  OS_TYPE="darwin" ;;
         CYGWIN*|MINGW*|MSYS*) OS_TYPE="windows" ;;
         *)        error "不支持的操作系统: $OS" ;;
     esac
-    
+
     case "$ARCH" in
         x86_64|amd64)  ARCH_TYPE="x86_64" ;;
         arm64|aarch64) ARCH_TYPE="aarch64" ;;
         armv7l)        ARCH_TYPE="armv7" ;;
         *)             error "不支持的架构: $ARCH" ;;
     esac
-    
+
     PLATFORM="${OS_TYPE}-${ARCH_TYPE}"
     info "检测到平台: $PLATFORM"
+}
+
+# 验证 SHA256 校验和
+verify_checksum() {
+    local file="$1"
+    local checksum_url="$2"
+
+    if [ "$NO_VERIFY" = "1" ]; then
+        warn "跳过 SHA256 校验（不推荐）"
+        return 0
+    fi
+
+    info "验证 SHA256 校验和..."
+
+    # 下载校验和文件
+    local checksum_file=$(mktemp)
+    if command -v curl &> /dev/null; then
+        curl -fsSL -o "$checksum_file" "$checksum_url" 2>/dev/null || {
+            warn "无法下载校验和文件，跳过验证"
+            rm -f "$checksum_file"
+            return 0
+        }
+    elif command -v wget &> /dev/null; then
+        wget -qO "$checksum_file" "$checksum_url" 2>/dev/null || {
+            warn "无法下载校验和文件，跳过验证"
+            rm -f "$checksum_file"
+            return 0
+        }
+    else
+        warn "需要 curl 或 wget 来验证校验和"
+        return 0
+    fi
+
+    # 读取期望的校验和
+    local expected_sum=$(cat "$checksum_file" | awk '{print $1}')
+    rm -f "$checksum_file"
+
+    # 计算实际校验和
+    local actual_sum=""
+    if command -v sha256sum &> /dev/null; then
+        actual_sum=$(sha256sum "$file" | awk '{print $1}')
+    elif command -v shasum &> /dev/null; then
+        actual_sum=$(shasum -a 256 "$file" | awk '{print $1}')
+    else
+        warn "未找到 sha256sum 或 shasum，跳过验证"
+        return 0
+    fi
+
+    # 比较校验和
+    if [ "$expected_sum" = "$actual_sum" ]; then
+        success "SHA256 校验通过"
+        return 0
+    else
+        error "SHA256 校验失败！文件可能已损坏或被篡改"
+        return 1
+    fi
 }
 
 # 检测包管理器并安装依赖
@@ -53,7 +110,7 @@ install_dependencies() {
         info "已安装 Rust/Cargo"
         return 0
     fi
-    
+
     warn "未检测到 Rust，正在安装..."
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
     source "$HOME/.cargo/env"
@@ -63,42 +120,57 @@ install_dependencies() {
 # 从 GitHub 下载预编译二进制（如果有）
 download_binary() {
     info "尝试下载预编译二进制..."
-    
-    # 尝试多种二进制格式
-    local VARIANTS=("${PLATFORM}" "${PLATFORM}-musl")
-    
+
+    # 尝试多种二进制格式（Linux 优先 musl 静态链接版本）
+    local VARIANTS=()
+    if [ "$OS_TYPE" = "linux" ]; then
+        VARIANTS=("${PLATFORM}-musl" "${PLATFORM}")
+    else
+        VARIANTS=("${PLATFORM}")
+    fi
+
     for variant in "${VARIANTS[@]}"; do
-        if [ "$VERSION" = "latest" ]; then
-            DOWNLOAD_URL="https://github.com/$REPO/releases/latest/download/${BINARY_NAME}-${variant}"
-        else
-            DOWNLOAD_URL="https://github.com/$REPO/releases/download/$VERSION/${BINARY_NAME}-${variant}"
+        local file_suffix=""
+        if [ "$OS_TYPE" = "windows" ]; then
+            file_suffix=".exe"
         fi
-        
-        info "尝试: ${BINARY_NAME}-${variant}"
-        
+
+        if [ "$VERSION" = "latest" ]; then
+            DOWNLOAD_URL="https://github.com/$REPO/releases/latest/download/${BINARY_NAME}-${variant}${file_suffix}"
+            CHECKSUM_URL="https://github.com/$REPO/releases/latest/download/${BINARY_NAME}-${variant}${file_suffix}.sha256"
+        else
+            DOWNLOAD_URL="https://github.com/$REPO/releases/download/$VERSION/${BINARY_NAME}-${variant}${file_suffix}"
+            CHECKSUM_URL="https://github.com/$REPO/releases/download/$VERSION/${BINARY_NAME}-${variant}${file_suffix}.sha256"
+        fi
+
+        info "尝试: ${BINARY_NAME}-${variant}${file_suffix}"
+
         # 尝试下载
         if curl -fsSL --head "$DOWNLOAD_URL" &> /dev/null; then
             TMP_FILE=$(mktemp)
             if curl -fsSL -o "$TMP_FILE" "$DOWNLOAD_URL" 2>/dev/null; then
-                chmod +x "$TMP_FILE"
-                
-                # 验证二进制文件
-                if [ -s "$TMP_FILE" ] && file "$TMP_FILE" | grep -q "executable"; then
-                    # 安装到目标目录
-                    if [ -w "$INSTALL_DIR" ]; then
-                        mv "$TMP_FILE" "$INSTALL_DIR/$BINARY_NAME"
-                    else
-                        sudo mv "$TMP_FILE" "$INSTALL_DIR/$BINARY_NAME"
+                # 验证 SHA256 校验和
+                if verify_checksum "$TMP_FILE" "$CHECKSUM_URL"; then
+                    chmod +x "$TMP_FILE"
+
+                    # 验证二进制文件
+                    if [ -s "$TMP_FILE" ] && file "$TMP_FILE" | grep -q "executable"; then
+                        # 安装到目标目录
+                        if [ -w "$INSTALL_DIR" ]; then
+                            mv "$TMP_FILE" "$INSTALL_DIR/$BINARY_NAME"
+                        else
+                            sudo mv "$TMP_FILE" "$INSTALL_DIR/$BINARY_NAME"
+                        fi
+
+                        success "已下载并安装预编译二进制 (${variant})"
+                        return 0
                     fi
-                    
-                    success "已下载并安装预编译二进制 (${variant})"
-                    return 0
                 fi
             fi
             rm -f "$TMP_FILE"
         fi
     done
-    
+
     warn "未找到适合当前平台的预编译二进制"
     return 1
 }

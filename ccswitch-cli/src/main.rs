@@ -43,6 +43,10 @@ fn main() -> Result<()> {
 
     // 如果没有子命令，检查是否启用 TUI 模式
     if cli.command.is_none() {
+        // 启动时检查版本更新（静默模式，异步执行）
+        let rt = tokio::runtime::Runtime::new()?;
+        rt.block_on(commands::check_on_startup());
+
         if cli.tui {
             return tui::run_tui();
         } else {
