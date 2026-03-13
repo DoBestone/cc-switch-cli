@@ -5,7 +5,7 @@
 
 use anyhow::{bail, Result};
 use colored::Colorize;
-use semver::{Version, VersionReq};
+use semver::Version;
 use serde::Deserialize;
 use std::process::Command;
 use std::time::Duration;
@@ -58,6 +58,7 @@ impl UpdateType {
     }
 
     /// 是否需要提示用户
+    #[allow(dead_code)]
     pub fn should_notify(&self) -> bool {
         !matches!(self, UpdateType::None)
     }
@@ -135,6 +136,7 @@ fn parse_version(version_str: &str) -> Result<Version> {
 }
 
 /// 检测新版本
+#[allow(dead_code)]
 pub async fn check_update(_ctx: &OutputContext) -> Result<Option<VersionInfo>> {
     check_update_internal().await
 }
@@ -299,7 +301,7 @@ fn get_platform_asset(assets: &[ReleaseAsset]) -> Option<String> {
 }
 
 /// 显示版本状态
-pub async fn show_status(ctx: &OutputContext, check_only: bool) -> Result<()> {
+pub async fn show_status(_ctx: &OutputContext, check_only: bool) -> Result<()> {
     match check_update_internal().await {
         Ok(Some(info)) => {
             println!();
@@ -431,7 +433,7 @@ pub async fn check_on_startup() {
 }
 
 /// 执行自动更新
-pub async fn self_update(ctx: &OutputContext, force: bool) -> Result<()> {
+pub async fn self_update(_ctx: &OutputContext, force: bool) -> Result<()> {
     // 首先检查是否有新版本
     let version_info = match check_update_internal().await? {
         Some(info) => info,

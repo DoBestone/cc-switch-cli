@@ -7,10 +7,17 @@
 //! - Skills 管理
 //! - 通用设置存储
 
+mod failover;
 mod mcp;
+pub(crate) mod migration;
 mod prompt;
+mod provider_endpoints;
 mod schema;
 mod skill;
+mod stream_check_db;
+mod usage_rollup;
+
+pub use failover::FailoverQueueItem;
 
 use crate::config::get_app_config_dir;
 use crate::error::AppError;
@@ -22,7 +29,7 @@ use std::sync::Mutex;
 
 /// 当前 Schema 版本号
 #[allow(dead_code)]
-pub(crate) const SCHEMA_VERSION: i32 = 5;
+pub(crate) const SCHEMA_VERSION: i32 = 6;
 
 /// 安全地序列化 JSON
 pub(crate) fn to_json_string<T: Serialize>(value: &T) -> Result<String, AppError> {
@@ -68,6 +75,8 @@ impl Database {
             conn: Mutex::new(conn),
         };
         db.create_tables()?;
+        db.apply_schema_migrations()?;
+        db.ensure_model_pricing_seeded()?;
 
         Ok(db)
     }
@@ -83,105 +92,9 @@ impl Database {
             conn: Mutex::new(conn),
         };
         db.create_tables()?;
+        db.ensure_model_pricing_seeded()?;
 
         Ok(db)
-    }
-
-    /// 创建数据表
-    fn create_tables(&self) -> Result<(), AppError> {
-        let conn = lock_conn!(self.conn);
-
-        conn.execute_batch(
-            r#"
-            -- 供应商表
-            CREATE TABLE IF NOT EXISTS providers (
-                id TEXT NOT NULL,
-                app_type TEXT NOT NULL,
-                name TEXT NOT NULL,
-                settings_config TEXT NOT NULL,
-                website_url TEXT,
-                category TEXT,
-                created_at INTEGER,
-                sort_index INTEGER,
-                notes TEXT,
-                meta TEXT,
-                icon TEXT,
-                icon_color TEXT,
-                in_failover_queue INTEGER DEFAULT 0,
-                is_current INTEGER DEFAULT 0,
-                PRIMARY KEY (id, app_type)
-            );
-
-            -- MCP 服务器表
-            CREATE TABLE IF NOT EXISTS mcp_servers (
-                id TEXT PRIMARY KEY,
-                name TEXT NOT NULL,
-                server_config TEXT NOT NULL,
-                description TEXT,
-                homepage TEXT,
-                docs TEXT,
-                tags TEXT,
-                enabled_claude INTEGER DEFAULT 0,
-                enabled_codex INTEGER DEFAULT 0,
-                enabled_gemini INTEGER DEFAULT 0,
-                enabled_opencode INTEGER DEFAULT 0,
-                created_at INTEGER,
-                sort_index INTEGER
-            );
-
-            -- Prompts 表
-            CREATE TABLE IF NOT EXISTS prompts (
-                id TEXT NOT NULL,
-                app_type TEXT NOT NULL,
-                name TEXT NOT NULL,
-                content TEXT NOT NULL,
-                description TEXT,
-                enabled INTEGER DEFAULT 0,
-                created_at INTEGER,
-                updated_at INTEGER,
-                PRIMARY KEY (id, app_type)
-            );
-
-            -- Skills 表
-            CREATE TABLE IF NOT EXISTS skills (
-                id TEXT PRIMARY KEY,
-                name TEXT NOT NULL,
-                description TEXT,
-                directory TEXT NOT NULL,
-                repo_owner TEXT,
-                repo_name TEXT,
-                repo_branch TEXT,
-                readme_url TEXT,
-                enabled_claude INTEGER DEFAULT 0,
-                enabled_codex INTEGER DEFAULT 0,
-                enabled_gemini INTEGER DEFAULT 0,
-                enabled_opencode INTEGER DEFAULT 0,
-                installed_at INTEGER
-            );
-
-            -- Skill 仓库表
-            CREATE TABLE IF NOT EXISTS skill_repos (
-                id TEXT PRIMARY KEY,
-                owner TEXT NOT NULL,
-                name TEXT NOT NULL,
-                branch TEXT DEFAULT 'main',
-                enabled INTEGER DEFAULT 1
-            );
-
-            -- 设置表
-            CREATE TABLE IF NOT EXISTS settings (
-                key TEXT PRIMARY KEY,
-                value TEXT NOT NULL
-            );
-
-            -- 创建索引
-            CREATE INDEX IF NOT EXISTS idx_providers_app_type ON providers(app_type);
-            CREATE INDEX IF NOT EXISTS idx_providers_is_current ON providers(is_current);
-            "#,
-        )
-        .map_err(|e| AppError::Database(e.to_string()))?;
-
-        Ok(())
     }
 
     // ===== Provider DAO =====

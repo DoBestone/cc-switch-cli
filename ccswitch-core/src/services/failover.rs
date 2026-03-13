@@ -8,13 +8,8 @@ use crate::provider::Provider;
 use crate::store::AppState;
 use indexmap::IndexMap;
 
-/// 故障转移队列项
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct FailoverQueueItem {
-    pub provider_id: String,
-    pub provider_name: String,
-    pub sort_index: usize,
-}
+// Re-export FailoverQueueItem from database layer
+pub use crate::database::FailoverQueueItem;
 
 /// 故障转移服务
 pub struct FailoverService;
@@ -30,12 +25,12 @@ impl FailoverService {
             .map(|(id, p)| FailoverQueueItem {
                 provider_id: id.clone(),
                 provider_name: p.name.clone(),
-                sort_index: p.sort_index.unwrap_or(0),
+                sort_index: p.sort_index,
             })
             .collect();
 
         // 按排序索引排序
-        queue.sort_by_key(|item| item.sort_index);
+        queue.sort_by_key(|item| item.sort_index.unwrap_or(usize::MAX));
 
         Ok(queue)
     }

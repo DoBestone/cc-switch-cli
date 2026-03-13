@@ -20,7 +20,7 @@ pub mod usage;
 pub mod webdav;
 
 // Re-export update types for use in main
-pub use update::{UpdateType, VersionInfo, check_on_startup};
+pub use update::check_on_startup;
 
 use anyhow::Result;
 

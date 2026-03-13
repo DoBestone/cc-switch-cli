@@ -48,30 +48,32 @@ fn read_required(prompt: &str) -> Result<String> {
     }
 }
 
-/// 选择应用类型
-fn select_app_type() -> Result<AppType> {
+/// 选择应用类型（返回 None 表示用户选择返回上一级）
+fn select_app_type() -> Result<Option<AppType>> {
     println!("\n{}", "选择应用类型:".cyan().bold());
     println!("  {} Claude Code (Anthropic 官方 CLI)", "1.".green());
     println!("  {} Codex (OpenAI CLI)", "2.".green());
     println!("  {} Gemini CLI (Google)", "3.".green());
     println!("  {} OpenCode", "4.".green());
+    println!("  {} {}", "0.".green(), "返回".white());
 
     loop {
         let choice = read_input("\n请输入数字 [1]: ")?;
         let choice = if choice.is_empty() { "1".to_string() } else { choice };
 
         match choice.as_str() {
-            "1" | "claude" => return Ok(AppType::Claude),
-            "2" | "codex" => return Ok(AppType::Codex),
-            "3" | "gemini" => return Ok(AppType::Gemini),
-            "4" | "opencode" => return Ok(AppType::OpenCode),
-            _ => println!("{}", "无效选择，请输入 1-4".yellow()),
+            "1" | "claude" => return Ok(Some(AppType::Claude)),
+            "2" | "codex" => return Ok(Some(AppType::Codex)),
+            "3" | "gemini" => return Ok(Some(AppType::Gemini)),
+            "4" | "opencode" => return Ok(Some(AppType::OpenCode)),
+            "0" | "q" | "back" => return Ok(None),
+            _ => println!("{}", "无效选择，请输入 0-4".yellow()),
         }
     }
 }
 
-/// 选择供应商
-fn select_provider(state: &AppState, app_type: AppType) -> Result<String> {
+/// 选择供应商（返回 None 表示用户选择返回上一级）
+fn select_provider(state: &AppState, app_type: AppType) -> Result<Option<String>> {
     let providers = ccswitch_core::ProviderService::list(state, app_type)?;
     let current_id = ccswitch_core::ProviderService::current(state, app_type).unwrap_or_default();
 
@@ -88,20 +90,25 @@ fn select_provider(state: &AppState, app_type: AppType) -> Result<String> {
         let current = if is_current { " (当前)".green().to_string() } else { String::new() };
         println!("  {} {} {}{}", format!("{}.", i + 1).green(), status, p.name, current);
     }
+    println!("  {} {}", "0.".green(), "返回".white());
 
     loop {
-        let choice = read_input("\n请输入序号或名称: ")?;
+        let choice = read_input("\n请输入序号或名称 (0=返回): ")?;
+
+        if choice == "0" || choice == "q" || choice == "back" {
+            return Ok(None);
+        }
 
         // 尝试解析为数字
         if let Ok(num) = choice.parse::<usize>() {
             if num > 0 && num <= provider_list.len() {
-                return Ok(provider_list[num - 1].1.name.clone());
+                return Ok(Some(provider_list[num - 1].1.name.clone()));
             }
         }
 
         // 尝试匹配名称
         if providers.values().any(|p| p.name == choice) || providers.contains_key(&choice) {
-            return Ok(choice);
+            return Ok(Some(choice));
         }
 
         println!("{}", "无效选择，请重新输入".yellow());
@@ -396,50 +403,50 @@ pub fn main_menu() -> Result<()> {
                 clear_screen();
                 if let Err(e) = interactive_mcp(&ctx) {
                     println!("{}", format!("错误: {}", e).red());
+                    pause();
                 }
-                pause();
             }
             "9" | "prompt" | "prompts" => {
                 clear_screen();
                 if let Err(e) = interactive_prompt(&ctx) {
                     println!("{}", format!("错误: {}", e).red());
+                    pause();
                 }
-                pause();
             }
             "10" | "skill" | "skills" => {
                 clear_screen();
                 if let Err(e) = interactive_skill(&ctx) {
                     println!("{}", format!("错误: {}", e).red());
+                    pause();
                 }
-                pause();
             }
             "11" | "openclaw" => {
                 clear_screen();
                 if let Err(e) = interactive_openclaw(&ctx) {
                     println!("{}", format!("错误: {}", e).red());
+                    pause();
                 }
-                pause();
             }
             "12" | "failover" => {
                 clear_screen();
                 if let Err(e) = interactive_failover(&ctx) {
                     println!("{}", format!("错误: {}", e).red());
+                    pause();
                 }
-                pause();
             }
             "13" | "usage" => {
                 clear_screen();
                 if let Err(e) = interactive_usage(&ctx) {
                     println!("{}", format!("错误: {}", e).red());
+                    pause();
                 }
-                pause();
             }
             "14" | "webdav" => {
                 clear_screen();
                 if let Err(e) = interactive_webdav(&ctx) {
                     println!("{}", format!("错误: {}", e).red());
+                    pause();
                 }
-                pause();
             }
             "15" | "web" => {
                 clear_screen();
@@ -452,22 +459,22 @@ pub fn main_menu() -> Result<()> {
                 clear_screen();
                 if let Err(e) = interactive_proxy(&ctx) {
                     println!("{}", format!("错误: {}", e).red());
+                    pause();
                 }
-                pause();
             }
             "17" | "speedtest" | "speed" => {
                 clear_screen();
                 if let Err(e) = interactive_speedtest(&ctx) {
                     println!("{}", format!("错误: {}", e).red());
+                    pause();
                 }
-                pause();
             }
             "18" | "env" => {
                 clear_screen();
                 if let Err(e) = interactive_env(&ctx) {
                     println!("{}", format!("错误: {}", e).red());
+                    pause();
                 }
-                pause();
             }
             "19" | "config" => {
                 clear_screen();
@@ -478,15 +485,15 @@ pub fn main_menu() -> Result<()> {
                 clear_screen();
                 if let Err(e) = interactive_update(&ctx) {
                     println!("{}", format!("错误: {}", e).red());
+                    pause();
                 }
-                pause();
             }
             "21" | "batch" => {
                 clear_screen();
                 if let Err(e) = interactive_batch(&ctx) {
                     println!("{}", format!("错误: {}", e).red());
+                    pause();
                 }
-                pause();
             }
             "0" | "q" | "quit" | "exit" => {
                 println!();
@@ -510,9 +517,9 @@ pub fn main_menu() -> Result<()> {
 fn interactive_switch(ctx: &OutputContext) -> Result<()> {
     println!("\n{}", "═══ 切换供应商 ═══".cyan().bold());
 
-    let app_type = select_app_type()?;
+    let Some(app_type) = select_app_type()? else { return Ok(()); };
     let state = AppState::init()?;
-    let name = select_provider(&state, app_type.clone())?;
+    let Some(name) = select_provider(&state, app_type.clone())? else { return Ok(()); };
 
     let app_arg = match app_type {
         AppType::Claude => AppTypeArg::Claude,
@@ -530,7 +537,7 @@ fn interactive_switch(ctx: &OutputContext) -> Result<()> {
 fn interactive_add(ctx: &OutputContext) -> Result<()> {
     println!("\n{}", "═══ 添加新供应商 ═══".cyan().bold());
 
-    let app_type = select_app_type()?;
+    let Some(app_type) = select_app_type()? else { return Ok(()); };
     let name = read_required("供应商名称")?;
 
     let app_arg = match app_type {
@@ -590,9 +597,9 @@ fn interactive_add(ctx: &OutputContext) -> Result<()> {
 fn interactive_remove(ctx: &OutputContext) -> Result<()> {
     println!("\n{}", "═══ 删除供应商 ═══".cyan().bold());
 
-    let app_type = select_app_type()?;
+    let Some(app_type) = select_app_type()? else { return Ok(()); };
     let state = AppState::init()?;
-    let name = select_provider(&state, app_type.clone())?;
+    let Some(name) = select_provider(&state, app_type.clone())? else { return Ok(()); };
 
     let app_arg = match app_type {
         AppType::Claude => AppTypeArg::Claude,
@@ -610,9 +617,9 @@ fn interactive_remove(ctx: &OutputContext) -> Result<()> {
 fn interactive_edit(ctx: &OutputContext) -> Result<()> {
     println!("\n{}", "═══ 编辑供应商 ═══".cyan().bold());
 
-    let app_type = select_app_type()?;
+    let Some(app_type) = select_app_type()? else { return Ok(()); };
     let state = AppState::init()?;
-    let name = select_provider(&state, app_type.clone())?;
+    let Some(name) = select_provider(&state, app_type.clone())? else { return Ok(()); };
 
     let app_arg = match app_type {
         AppType::Claude => AppTypeArg::Claude,
@@ -657,9 +664,9 @@ fn interactive_test(ctx: &OutputContext) -> Result<()> {
         let choice = read_input("请选择: ")?;
         match choice.as_str() {
             "1" => {
-                let app_type = select_app_type()?;
+                let Some(app_type) = select_app_type()? else { continue; };
                 let state = AppState::init()?;
-                let name = select_provider(&state, app_type.clone())?;
+                let Some(name) = select_provider(&state, app_type.clone())? else { continue; };
 
                 let app_arg = match app_type {
                     AppType::Claude => AppTypeArg::Claude,
@@ -675,7 +682,7 @@ fn interactive_test(ctx: &OutputContext) -> Result<()> {
                 return Ok(());
             }
             "2" => {
-                let app_type = select_app_type()?;
+                let Some(app_type) = select_app_type()? else { continue; };
                 let api_key = read_required("API Key")?;
                 let base_url = read_optional("Base URL", None)?;
                 let model = read_optional("测试模型", None)?;
@@ -770,7 +777,7 @@ fn interactive_prompt(ctx: &OutputContext) -> Result<()> {
             "2" | "add" => {
                 clear_screen();
                 println!("\n{}", "添加 Prompt:".white().bold());
-                let app_type = select_app_type()?;
+                let Some(app_type) = select_app_type()? else { continue; };
                 let app_arg = match app_type {
                     AppType::Claude => AppTypeArg::Claude,
                     AppType::Codex => AppTypeArg::Codex,
@@ -907,22 +914,35 @@ fn interactive_proxy(ctx: &OutputContext) -> Result<()> {
 
 /// 交互式端点测速
 fn interactive_speedtest(ctx: &OutputContext) -> Result<()> {
-    println!("\n{}", "═══ 端点测速 ═══".cyan().bold());
-    println!();
-    println!("将测试以下端点的延迟:");
-    println!("  - https://api.anthropic.com");
-    println!("  - https://api.openai.com");
-    println!("  - https://generativelanguage.googleapis.com");
-    println!();
+    loop {
+        clear_screen();
+        println!("{}", "═══ 端点测速 ═══".cyan().bold());
+        println!();
+        println!("将测试以下端点的延迟:");
+        println!("  - https://api.anthropic.com");
+        println!("  - https://api.openai.com");
+        println!("  - https://generativelanguage.googleapis.com");
+        println!();
+        println!("  {} {}", "1.".green(), "开始测速".white());
+        println!("  {} {}", "0.".green(), "返回主菜单".white());
+        println!();
 
-    let input = read_input("是否开始测试? [Y/n]: ")?;
-    if input.is_empty() || input.to_lowercase() == "y" {
-        tokio::runtime::Runtime::new()
-            .unwrap()
-            .block_on(commands::speedtest::test(ctx, vec![], 10, false))?;
+        let choice = read_input("请选择: ")?;
+        match choice.as_str() {
+            "1" | "y" | "yes" | "" => {
+                clear_screen();
+                tokio::runtime::Runtime::new()
+                    .unwrap()
+                    .block_on(commands::speedtest::test(ctx, vec![], 10, false))?;
+                pause();
+            }
+            "0" | "q" | "back" => return Ok(()),
+            _ => {
+                println!("{}", "无效选择".yellow());
+                std::thread::sleep(std::time::Duration::from_millis(800));
+            }
+        }
     }
-
-    Ok(())
 }
 
 /// 交互式环境检测
@@ -1065,27 +1085,27 @@ fn interactive_failover(ctx: &OutputContext) -> Result<()> {
         match choice.as_str() {
             "1" | "list" => {
                 clear_screen();
-                let app_type = select_app_type()?;
+                let Some(app_type) = select_app_type()? else { continue; };
                 commands::failover::list(ctx, app_type)?;
                 pause();
             }
             "2" | "add" => {
                 clear_screen();
-                let app_type = select_app_type()?;
+                let Some(app_type) = select_app_type()? else { continue; };
                 let provider_id = read_required("供应商 ID")?;
                 commands::failover::add(ctx, app_type, &provider_id)?;
                 pause();
             }
             "3" | "remove" => {
                 clear_screen();
-                let app_type = select_app_type()?;
+                let Some(app_type) = select_app_type()? else { continue; };
                 let provider_id = read_required("供应商 ID")?;
                 commands::failover::remove(ctx, app_type, &provider_id)?;
                 pause();
             }
             "4" | "clear" => {
                 clear_screen();
-                let app_type = select_app_type()?;
+                let Some(app_type) = select_app_type()? else { continue; };
                 commands::failover::clear(ctx, app_type)?;
                 pause();
             }
@@ -1134,7 +1154,7 @@ fn interactive_usage(ctx: &OutputContext) -> Result<()> {
             "4" | "limit" => {
                 clear_screen();
                 let provider_id = read_required("供应商 ID")?;
-                let app_type = select_app_type()?;
+                let Some(app_type) = select_app_type()? else { continue; };
                 commands::usage::check_limit(ctx, app_type, &provider_id)?;
                 pause();
             }
@@ -1318,11 +1338,13 @@ fn interactive_batch(ctx: &OutputContext) -> Result<()> {
                 println!("  {} Claude", "1.".green());
                 println!("  {} Codex", "2.".green());
                 println!("  {} Gemini", "3.".green());
+                println!("  {} 返回", "0.".green());
                 let from_choice = read_input("请选择: ")?;
                 let from_app = match from_choice.as_str() {
                     "1" => AppTypeArg::Claude,
                     "2" => AppTypeArg::Codex,
                     "3" => AppTypeArg::Gemini,
+                    "0" | "q" | "back" => continue,
                     _ => {
                         println!("{}", "无效选择".yellow());
                         pause();
