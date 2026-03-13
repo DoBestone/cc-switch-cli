@@ -1,8 +1,19 @@
 # CC-Switch CLI
 
+> ## ⚠️ 停止维护公告
+>
+> **本仓库自 2026 年 3 月 13 日起停止维护。**
+>
+> 当初只是有需求，所以简单开发了这个 CLI 版本。今天突然发现已经有一个开发很久、功能更完善的 CLI 仓库：
+>
+> 👉 **请前往 [SaladDay/cc-switch-cli](https://github.com/SaladDay/cc-switch-cli) 使用更好用的 CLI 版本**
+>
+> 感谢大家的支持，建议迁移到上方链接的仓库。
+
 [![Release](https://img.shields.io/github/v/release/DoBestone/cc-switch-cli?include_prereleases)](https://github.com/DoBestone/cc-switch-cli/releases)
 [![License](https://img.shields.io/github/license/DoBestone/cc-switch-cli)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-blue)](https://github.com/DoBestone/cc-switch-cli/releases)
+[![Maintenance](https://img.shields.io/badge/Maintained%3F-no-red.svg)](https://github.com/SaladDay/cc-switch-cli)
 
 纯命令行版本的 CC-Switch，用于在 Linux 服务器（无图形界面）上管理 Claude Code、Codex、Gemini CLI、OpenClaw 等 AI 编程工具的供应商配置。
 
